@@ -554,6 +554,35 @@ void vgatext_glyphat(vgatext *self, int32_t x, int32_t y, int32_t ch, int32_t fg
   ((int32_t *)bufptr)[0] = bgcol;
 }
 
+void vgatext_invertcurchar(vgatext *self)
+{
+  int32_t 	bufptr;
+  int32_t	x, y;
+  int32_t       ch;
+  int32_t       f, b;
+  
+  x = self->curx;
+  y = self->cury;
+  bufptr = (int32_t)(self->screen_buffer);
+  bufptr = bufptr + (((y * VGATEXT_COLS) + x) * 8);
+  f = ((int32_t *)bufptr)[0];
+  b = ((int32_t *)bufptr)[1];
+
+  ch = f & 0xff;
+  if (!ch) {
+      ch = ' ';
+  }
+  f &= ~0xff;
+  b &= ~0xff;
+  if (f == b) {
+      f = self->fgcolor;
+      b = self->bgcolor;
+  }
+  b |= ch;
+  ((int32_t *)bufptr)[0] = b;
+  ((int32_t *)bufptr)[1] = f;
+}
+
 void vgatext_cls(vgatext *self)
 {
   memset( (void *)(self->screen_buffer), 0, sizeof(int32_t)*((VGATEXT_COLS * VGATEXT_ROWS) * 2));

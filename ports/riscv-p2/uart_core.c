@@ -22,6 +22,8 @@ void mp_hal_io_init(void) {
 // Receive single character
 int mp_hal_stdin_rx_chr(void) {
     unsigned char c;
+    int32_t flip = 0;
+    
 #if MICROPY_MIN_USE_STDOUT
     int r = read(0, &c, 1);
     (void)r;
@@ -29,7 +31,14 @@ int mp_hal_stdin_rx_chr(void) {
     int ci;
     do {
         ci = _getbyte();
+        if (ci < 0 && !flip) {
+            vgatext_invertcurchar(&vga);
+            flip = 1;
+        }
     } while (ci < 0);
+    if (flip) {
+        vgatext_invertcurchar(&vga);
+    }
     c = ci;
 #endif
     return c;

@@ -48,6 +48,7 @@ typedef struct vgatext {
   void vgatext_stop(vgatext *self);
   void vgatext_tx(vgatext *self, int32_t c);
   void vgatext_glyphat(vgatext *self, int32_t x, int32_t y, int32_t ch, int32_t fgcol, int32_t bgcol);
+  void vgatext_invertcurchar(vgatext *self);
   void vgatext_cls(vgatext *self);
   void vgatext_str(vgatext *self, const char *s);
   void vgatext_num(vgatext *self, int32_t val, int32_t base, int32_t signflag, int32_t digitsneeded);

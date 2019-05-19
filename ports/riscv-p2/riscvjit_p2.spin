@@ -1290,9 +1290,10 @@ ser_init
 		hubset	##CLOCK_MODE
 		waitx	##20_000_000/100  ' longer than necessary
 		hubset	##CLOCK_MODE+3
-
-		'hubset ##%0010_0000_0000_0000_0000_0000_0000_0000 ' try to unlock top of memory; does not seem to work
-		' clear write protect
+		wrlong	##CYCLES_PER_SEC, #$14
+		wrlong	##CLOCK_MODE, #$18
+		
+		' set up serial
 		mov	x4, ##7 + ((CYCLES_PER_SEC / BAUD) << 16) ' bitperiod
 		wrpin	##_txmode, #TX_PIN
 		wxpin	x4, #TX_PIN

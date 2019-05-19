@@ -57,6 +57,8 @@ SRC_C = \
 	modpyb.c \
 	modpybpin.c \
 	board.c \
+	vgatext.c \
+	vga_tile_driver.c \
 	lib/utils/printf.c \
 	lib/utils/stdout_helpers.c \
 	lib/utils/pyexec.c \

@@ -42,10 +42,12 @@ void debug_msg(const char *s)
 int main(int argc, char **argv) {
     int stack_dummy;
     stack_top = (char*)&stack_dummy;
-
+    extern void mp_hal_io_init(void);
+    
     #if MICROPY_ENABLE_GC
     gc_init(heap, heap + sizeof(heap));
     #endif
+    mp_hal_io_init();
     mp_init();
     #if MICROPY_ENABLE_COMPILER
     #if MICROPY_REPL_EVENT_DRIVEN
@@ -105,4 +107,3 @@ void MP_WEAK __assert_func(const char *file, int line, const char *func, const c
     __fatal_error("Assertion failed");
 }
 #endif
-

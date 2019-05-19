@@ -1,5 +1,8 @@
 #include <unistd.h>
 #include "py/mpconfig.h"
+#include "vgatext.h"
+
+#define VGA_BASEPIN 48
 
 /*
  * Core UART functions to implement for a port
@@ -9,6 +12,12 @@ extern int _getbyte();
 extern int _putbyte(int c);
 extern unsigned int _getcnt();
 extern void _waitcnt(unsigned int n);
+
+vgatext vga;
+
+void mp_hal_io_init(void) {
+    vgatext_start(&vga, VGA_BASEPIN);
+}
 
 // Receive single character
 int mp_hal_stdin_rx_chr(void) {
@@ -44,6 +53,7 @@ void mp_hal_stdout_tx_strn(const char *str, mp_uint_t len) {
     while (maxlen--) {
         c = (*str++) & 0xff;
         _putbyte(c);
+        vgatext_tx(&vga, c);
     }
 //    _pausems(500);
 #endif

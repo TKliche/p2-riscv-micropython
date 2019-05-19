@@ -1,6 +1,9 @@
+#include <stdio.h>
 #include <unistd.h>
 #include "py/mpconfig.h"
 #include "vgatext.h"
+#include "OneCogKbM.h"
+#include "riscv.h"
 
 #define VGA_BASEPIN 48
 
@@ -14,9 +17,62 @@ extern unsigned int _getcnt();
 extern void _waitcnt(unsigned int n);
 
 vgatext vga;
+OneCogKbM usb1;
+static volatile uint8_t usb1_status[4];
+static int32_t usb1_eventa;
 
 void mp_hal_io_init(void) {
+    int cog;
+    usb1_status[0] = usb1_status[1] = usb1_status[2] = usb1_status[3] = 0;
     vgatext_start(&vga, VGA_BASEPIN);
+//    OneCogKbM_start(&usb1, (int32_t)&usb1_status); // FIXME: not working yet
+    cog = usb1_status[0] - 1;
+    if (cog >= 0) {
+        usb1_eventa = usb1_status[1];
+        printf("started USB on cog %d\n", cog);
+    } else {
+        printf("USB not started\n");
+    }
+}
+
+static void usb_event(int event)
+{
+    switch(event) {
+    case ONECOGKBM_DEV_DISCONNECT:
+        usb1_status[2] = usb1_status[3] = 0;
+        break;
+    case ONECOGKBM_KB_READY:
+    case ONECOGKBM_KBM_READY:
+        usb1_status[2] = 1;
+        break;
+    default:
+        break;
+    }
+}
+
+int getrawbyte() {
+    int ci;
+    int event;
+    ci = _getbyte();
+    if (ci < 0) {
+        event = getpin(usb1_eventa);
+        if (event) {
+            event = pinrdr(usb1_eventa);
+            usb_event(event);
+        }
+        if (usb1_status[2] != 0) {
+            ci = OneCogKbM_key() & 0xff;
+            if (ci == 0) {
+                ci = -1;
+            }
+        }
+    }
+    if (ci <= 0) {
+        ci = -1;
+    } else {
+        ci = ci & 0xff;
+    }
+    return ci;
 }
 
 // Receive single character
@@ -30,7 +86,7 @@ int mp_hal_stdin_rx_chr(void) {
 #else
     int ci;
     do {
-        ci = _getbyte();
+        ci = getrawbyte();
         if (ci < 0 && !flip) {
             vgatext_invertcurchar(&vga);
             flip = 1;

@@ -61,9 +61,15 @@ int getrawbyte() {
             usb_event(event);
         }
         if (usb1_status[2] != 0) {
-            ci = OneCogKbM_key() & 0xff;
+            event = OneCogKbM_key();
+            ci = event & 0xff;
             if (ci == 0) {
                 ci = -1;
+            } else {
+                if (event & 0x010000) {
+                    // control key
+                    ci = ci & 0x1f;
+                }
             }
         }
     }

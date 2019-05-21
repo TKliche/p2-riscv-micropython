@@ -117,6 +117,12 @@ void mp_hal_stdout_tx_strn(const char *str, mp_uint_t len) {
 //    if (maxlen > 256) maxlen = 256;
     while (maxlen--) {
         c = (*str++) & 0xff;
+#if 0        
+        if (c < 0x20) {
+            _putbyte('^');
+            c += '@';
+        }
+#endif        
         _putbyte(c);
         vgatext_tx(&vga, c);
     }

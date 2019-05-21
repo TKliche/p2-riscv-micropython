@@ -31,6 +31,7 @@ static  int32_t vgatext_defaultval(int32_t arg, int32_t v);
 static  void vgatext_handle_csi(vgatext *self, int32_t c);
 static  void vgatext_clear(vgatext *self, int32_t a, int32_t b);
 static  void vgatext_clear_in_display(vgatext *self, int32_t n);
+static  void vgatext_clear_in_line(vgatext *self, int32_t n);
 static  int32_t vgatext_fetcharg(vgatext *self, int32_t i);
 static  void vgatext_set_graphic_rendition(vgatext *self, int32_t i);
 static  int32_t vgatext_ansicolor(vgatext *self, int32_t n);
@@ -516,6 +517,8 @@ static void vgatext_handle_csi(vgatext *self, int32_t c)
                 } else {
                   if (c == 'J') {
                     vgatext_clear_in_display(self, vgatext_defaultval(self->args[0], 0));
+                  } else if (c == 'K') {
+                      vgatext_clear_in_line(self, vgatext_defaultval(self->args[0], 0));
                   } else {
                     if (c == 'm') {
                       vgatext_set_graphic_rendition(self, 0);
@@ -592,7 +595,7 @@ void vgatext_cls(vgatext *self)
 static void vgatext_clear(vgatext *self, int32_t a, int32_t b)
 {
   int32_t 	ptr, cnt;
-  ptr = ((int32_t)(self->screen_buffer)) + a;
+  ptr = ((int32_t)(self->screen_buffer)) + 8*a;
   cnt = b - a;
   while (cnt >= 0) {
     ((int32_t *)ptr)[0] = self->fgcolor;
@@ -618,6 +621,25 @@ static void vgatext_clear_in_display(vgatext *self, int32_t n)
   } else {
     startpix = (VGATEXT_COLS * self->cury) + self->curx;
     endpix = (VGATEXT_COLS * VGATEXT_ROWS) - 1;
+  }
+  vgatext_clear(self, startpix, endpix);
+}
+
+// clear from cursor to end of display (if n==0) or from start of screen to cursor (n == 1)
+// n==2 clears whole display and resets cursor to top
+static void vgatext_clear_in_line(vgatext *self, int32_t n)
+{
+  int32_t 	startpix, endpix;
+  if (n == 2) {
+    self->curx = 0;
+    n = 0;
+  }
+  if (n == 1) {
+    startpix = (VGATEXT_COLS * self->cury);
+    endpix = (VGATEXT_COLS * self->cury) + self->curx;
+  } else {
+    startpix = (VGATEXT_COLS * self->cury) + self->curx;
+    endpix = (VGATEXT_COLS * (self->cury+1)) - 1;
   }
   vgatext_clear(self, startpix, endpix);
 }

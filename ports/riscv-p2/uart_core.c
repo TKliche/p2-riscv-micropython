@@ -25,7 +25,7 @@ void mp_hal_io_init(void) {
     int cog;
     usb1_status[0] = usb1_status[1] = usb1_status[2] = usb1_status[3] = 0;
     vgatext_start(&vga, VGA_BASEPIN);
-//    OneCogKbM_start(&usb1, (int32_t)&usb1_status); // FIXME: not working yet
+    OneCogKbM_start(&usb1, (int32_t)&usb1_status); // FIXME: not working yet
     cog = usb1_status[0] - 1;
     if (cog >= 0) {
         usb1_eventa = usb1_status[1];

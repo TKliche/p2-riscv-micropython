@@ -4,11 +4,12 @@ board.
 To run it, load the upython.binary file into the P2 board. It will
 talk on the standard serial line at 230400 baud. It will also try to
 talk to a VGA board based at pin 48 and a USB keyboard based at pin 16
-(using the standard P2 eval A/V and serial host expansion boards).
+(using the standard P2 eval A/V and serial host expansion boards). The
+USB driver used is garryj's excellent single COG keyboard/mouse driver
+(although I haven't implemented mouse support yet).
 
-The only P2 specific feature supported right now is a PIN class, which
-is in the standard pyb module. You can toggle pin 56 on the P2 board,
-for example, with:
+There is a P2 PIN class supported in the standard pyb module. You can
+toggle pin 56 on the P2 board, for example, with:
 
 >>> import pyb
 >>> p = pyb.Pin(56)

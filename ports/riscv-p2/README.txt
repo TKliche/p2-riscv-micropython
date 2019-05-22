@@ -45,14 +45,14 @@ makeoutput() methods are only really needed for smart pin manipulation
 
 Also note that this version supports long integers, so effectively the
 smart pin registers are 32 bit unsigned values. Only the lower 32 bits
-of any value passed to them are used.
+of any value passed to them are used. For example:
 
->>> import pyb
->>> p=pyb.Pin(1)
->>> p.mode(2)
->>> p.makeoutput()
->>> p.xval(-1)
->>> hex(p.readzval())
+import pyb
+p=pyb.Pin(1)
+p.mode(2)
+p.makeoutput()
+p.xval(-1)
+hex(p.readzval())
 '0xffffffff'
 
 

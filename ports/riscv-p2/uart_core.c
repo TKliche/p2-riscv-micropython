@@ -94,7 +94,10 @@ static int getrawbyte() {
         event = OneCogKbM_key();
         if (event != 0) {
             ci = event & 0xff;
-            if (event & 0x010000) {
+            if (ci == 0) {
+                ci = -1;
+            }
+            else if (event & 0x010000) {
                 ci = ci & 0x1f;
             }
         } else {

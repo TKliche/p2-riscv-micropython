@@ -38,6 +38,7 @@ void mp_hal_io_init(void) {
     BufferSerial_start(&ser1);
 }
 
+#if 0
 static void usb_event(int event)
 {
     switch(event) {
@@ -52,39 +53,9 @@ static void usb_event(int event)
         break;
     }
 }
+#endif
 
-int getrawbyte() {
-    int ci;
-    int event;
-    ci = BufferSerial_rx(&ser1);
-    // want the case where we are receiving data from serial to
-    // be the default path, hence the __builtin_expect
-    if (__builtin_expect((ci < 0), 0)) {
-        event = getpin(usb1_eventa);
-        if (event) {
-            event = pinrdr(usb1_eventa);
-            usb_event(event);
-        }
-        if (usb1_status[2] != 0) {
-            event = OneCogKbM_key();
-            ci = event & 0xff;
-            if (ci == 0) {
-                ci = -1;
-            } else {
-                if (event & 0x010000) {
-                    // control key
-                    ci = ci & 0x1f;
-                }
-            }
-        }
-    }
-    if (ci <= 0) {
-        ci = -1;
-    } else {
-        ci = ci & 0xff;
-    }
-    return ci;
-}
+static int getrawbyte();
 
 // Receive single character
 int mp_hal_stdin_rx_chr(void) {
@@ -109,6 +80,28 @@ int mp_hal_stdin_rx_chr(void) {
     c = ci;
 #endif
     return c;
+}
+
+static int getrawbyte() {
+    int ci;
+    int event;
+    
+    event = ser1.data;
+    if (event != 0) {
+        ser1.data = 0;
+        ci = event & 0xff;
+    } else {
+        event = OneCogKbM_key();
+        if (event != 0) {
+            ci = event & 0xff;
+            if (event & 0x010000) {
+                ci = ci & 0x1f;
+            }
+        } else {
+            ci = -1;
+        }
+    }
+    return ci;
 }
 
 void _pausems(unsigned numms)

@@ -9,6 +9,8 @@
 #include "py/mperrno.h"
 #include "lib/utils/pyexec.h"
 
+#define USER_MEMORY 160*1024
+
 #if MICROPY_ENABLE_COMPILER
 void do_str(const char *src, mp_parse_input_kind_t input_kind) {
     nlr_buf_t nlr;
@@ -28,7 +30,7 @@ void do_str(const char *src, mp_parse_input_kind_t input_kind) {
 
 static char *stack_top;
 #if MICROPY_ENABLE_GC
-static char heap[192*1024];
+static char heap[USER_MEMORY];
 #endif
 
 extern int mp_hal_stdin_rx_chr(void);

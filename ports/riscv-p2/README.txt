@@ -68,5 +68,5 @@ def perfTest():
   print("Count: ", count)
 
 
-p2.binary:   107861
-p2emu.binary: 29974
+p2.binary:    53033
+p2emu.binary: 29748

@@ -60,6 +60,7 @@ SRC_C = \
 	vgatext.c \
 	vga_tile_driver.c \
 	OneCogKbM.c \
+	BufferSerial.c \
 	lib/utils/printf.c \
 	lib/utils/stdout_helpers.c \
 	lib/utils/pyexec.c \

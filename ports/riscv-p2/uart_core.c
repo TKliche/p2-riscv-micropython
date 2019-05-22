@@ -3,6 +3,7 @@
 #include "py/mpconfig.h"
 #include "vgatext.h"
 #include "OneCogKbM.h"
+#include "BufferSerial.h"
 #include "riscv.h"
 
 #define VGA_BASEPIN 48
@@ -18,6 +19,7 @@ extern void _waitcnt(unsigned int n);
 
 vgatext vga;
 OneCogKbM usb1;
+BufferSerial ser1;
 static volatile uint8_t usb1_status[4];
 static int32_t usb1_eventa;
 
@@ -25,7 +27,7 @@ void mp_hal_io_init(void) {
     int cog;
     usb1_status[0] = usb1_status[1] = usb1_status[2] = usb1_status[3] = 0;
     vgatext_start(&vga, VGA_BASEPIN);
-    OneCogKbM_start(&usb1, (int32_t)&usb1_status); // FIXME: not working yet
+    OneCogKbM_start(&usb1, (int32_t)&usb1_status);
     cog = usb1_status[0] - 1;
     if (cog >= 0) {
         usb1_eventa = usb1_status[1];
@@ -33,6 +35,7 @@ void mp_hal_io_init(void) {
     } else {
         printf("USB not started\n");
     }
+    BufferSerial_start(&ser1);
 }
 
 static void usb_event(int event)
@@ -53,8 +56,10 @@ static void usb_event(int event)
 int getrawbyte() {
     int ci;
     int event;
-    ci = _getbyte();
-    if (ci < 0) {
+    ci = BufferSerial_rx(&ser1);
+    // want the case where we are receiving data from serial to
+    // be the default path, hence the __builtin_expect
+    if (__builtin_expect((ci < 0), 0)) {
         event = getpin(usb1_eventa);
         if (event) {
             event = pinrdr(usb1_eventa);

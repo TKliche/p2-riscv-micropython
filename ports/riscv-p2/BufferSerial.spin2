@@ -23,6 +23,7 @@ loop
 	if_z	jmp	#skip_write	 ' no, nothing to write
 		rdlut	tmp, buftail
 		add	buftail, #1
+		and	buftail, #$1ff
 		wrlong	tmp, dataptr
 skip_write
 

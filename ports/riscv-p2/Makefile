@@ -5,10 +5,13 @@ LDFILE ?= riscv_p2.ld
 FASTSPIN = /home/ersmith/Parallax/spin2cpp/build/fastspin
 P2HEADER = p2jitheader.bin
 P2EMUHEADER = p2emuheader.bin
+P2TRACEHEADER = p2traceheader.bin
 CROSS = 1
 
 RV32_MATHLIB=/opt/riscv/riscv32-unknown-elf/lib/libm.a
 RV32_GCCLIB=/opt/riscv/lib/gcc/riscv32-unknown-elf/8.2.0/libgcc.a
+
+HEADERSIZE=16384
 
 # qstr definitions (must come before including py.mk)
 QSTR_DEFS = qstrdefsport.h
@@ -70,7 +73,7 @@ SRC_C = \
 OBJ = $(CRT0) $(PY_CORE_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
 
 ifeq ($(CROSS), 1)
-all: $(BUILD)/p2.binary $(BUILD)/p2emu.binary
+all: $(BUILD)/p2.binary $(BUILD)/p2emu.binary $(BUILD)/p2trace.binary
 else
 all: $(BUILD)/firmware.elf
 endif
@@ -89,16 +92,23 @@ $(BUILD)/p2.binary: $(BUILD)/$(P2HEADER) $(BUILD)/firmware.bin
 	cat $^ > $@
 $(BUILD)/p2emu.binary: $(BUILD)/$(P2EMUHEADER) $(BUILD)/firmware.bin
 	cat $^ > $@
+$(BUILD)/p2trace.binary: $(BUILD)/$(P2TRACEHEADER) $(BUILD)/firmware.bin
+	cat $^ > $@
 
 $(BUILD)/p2jitheader.bin: riscvjit_p2.spin
 	mkdir -p $(BUILD)
 	$(FASTSPIN) -2 -c -o $(BUILD)/p2jitheader.bin riscvjit_p2.spin
-	dd if=/dev/null of=$(BUILD)/p2jitheader.bin bs=1 count=1 seek=8192
+	dd if=/dev/null of=$(BUILD)/p2jitheader.bin bs=1 count=1 seek=$(HEADERSIZE)
+
+$(BUILD)/p2traceheader.bin: riscvtrace_p2.spin jit/jit_engine.spinh jit/util_serial.spin2
+	mkdir -p $(BUILD)
+	$(FASTSPIN) -2 -c -o $(BUILD)/p2traceheader.bin riscvtrace_p2.spin
+	dd if=/dev/null of=$(BUILD)/p2traceheader.bin bs=1 count=1 seek=$(HEADERSIZE)
 
 $(BUILD)/p2emuheader.bin: debug.spin riscvemu_p2.spin
 	mkdir -p $(BUILD)
 	$(FASTSPIN) -2 -o $(BUILD)/p2emuheader.bin debug.spin
-	dd if=/dev/null of=$(BUILD)/p2emuheader.bin bs=1 count=1 seek=8192
+	dd if=/dev/null of=$(BUILD)/p2emuheader.bin bs=1 count=1 seek=$(HEADERSIZE)
 
 # Run emulation build on a POSIX system with suitable terminal settings
 run:

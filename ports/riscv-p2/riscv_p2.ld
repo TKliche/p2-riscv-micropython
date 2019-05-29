@@ -1,6 +1,6 @@
 SECTIONS
 {
-  . = 0x2000;
+  . = 0x4000;
   .text :
   {
 	*(.text)

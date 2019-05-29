@@ -5,7 +5,7 @@
 }} 
 
 CON
-  PROGBASE = $2000
+  PROGBASE = $4000
 #ifdef __P2__
   _clkfreq = 160_000_000
   _clkmode = $010007f8

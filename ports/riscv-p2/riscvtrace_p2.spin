@@ -1,6 +1,6 @@
 '#define DEBUG_ENGINE
 '#define USE_DISASM
-#define USE_LUT_CACHE
+'#define USE_LUT_CACHE
 
 {{
    RISC-V Emulator for Parallax Propeller
@@ -38,7 +38,7 @@ CON
   WZ_BITNUM = 19
   IMM_BITNUM = 18
   BASE_OF_MEM = $4000   ' 16K
-  TOP_OF_MEM = $78000   ' leaves 32K free at top for cache and debug
+  TOP_OF_MEM = $70000   ' leaves 64K free at top for cache and debug
   HIBIT = $80000000
 
   RV_SIGNOP_BITNUM = 30		' RISCV bit for changing shr/sar
@@ -326,8 +326,10 @@ ldst_need_offset
 		' wrbyte rd, ptra[immval]
 		' can skip the "mov" if ptra already holds
 		' rs1
+#ifdef NEVER		
 		cmp	ptra_reg, rs1 wz
 	if_z	jmp	#skip_ptra_mov
+#endif	
 		mov	ptra_reg, rs1
 		sets	mov_to_ptra, rs1
 		mov	jit_instrptr, #mov_to_ptra

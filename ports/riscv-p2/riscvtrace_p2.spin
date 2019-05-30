@@ -326,15 +326,15 @@ ldst_need_offset
 		' wrbyte rd, ptra[immval]
 		' can skip the "mov" if ptra already holds
 		' rs1
-#ifdef NEVER		
 		cmp	ptra_reg, rs1 wz
 	if_z	jmp	#skip_ptra_mov
-#endif	
 		mov	ptra_reg, rs1
 		sets	mov_to_ptra, rs1
 		mov	jit_instrptr, #mov_to_ptra
 		call	#emit1		
 skip_ptra_mov
+		cmp	rd, ptra_reg wz
+	if_z	neg	ptra_reg, #1
 		'' see if this is a short offset
 		mov	temp, #15
 		' note: low bits of func3 == 0 for byte, 1 for word, 2 for long
@@ -379,7 +379,7 @@ final_ldst
 		'' now change the opdata to look like
 		''   rdword rd, ptra
 		sets	opdata, dest
-do_opdata_and_sign		
+do_opdata_and_sign
 		setd	opdata, rd
 		mov	jit_instrptr, #opdata
 		call	#emit1
@@ -733,8 +733,8 @@ emit4
 		'' called from the JIT engine loop
 		''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 compile_bytecode_start_line
-		neg	ptra_reg, #1
-		ret
+	_ret_	neg	ptra_reg, #1
+
 compile_bytecode
 		' fetch the actual RISC-V opcode
 		rdlong	opcode, ptrb++

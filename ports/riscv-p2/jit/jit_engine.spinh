@@ -151,7 +151,6 @@ cache_miss
 		call	#ser_hex
 #endif
 
-compile_line
 		call	#compile_bytecode_start_line
 compile_loop
 		call	#compile_bytecode

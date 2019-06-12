@@ -38,7 +38,7 @@ CON
   WZ_BITNUM = 19
   IMM_BITNUM = 18
   BASE_OF_MEM = $4000   ' 16K
-  TOP_OF_MEM = $70000   ' leaves 64K free at top for cache and debug
+  TOP_OF_MEM = $70000   ' leaves 32K free at top for cache and debug
   HIBIT = $80000000
 
   RV_SIGNOP_BITNUM = 30		' RISCV bit for changing shr/sar
@@ -333,8 +333,10 @@ ldst_need_offset
 		mov	jit_instrptr, #mov_to_ptra
 		call	#emit1		
 skip_ptra_mov
-		cmp	rd, ptra_reg wz
-	if_z	neg	ptra_reg, #1
+		'' check to see if we're about to trash the register we
+		'' think is in ptra
+		cmp	 rd, ptra_reg wz
+	if_z	neg	 ptra_reg, #1
 		'' see if this is a short offset
 		mov	temp, #15
 		' note: low bits of func3 == 0 for byte, 1 for word, 2 for long
@@ -379,7 +381,7 @@ final_ldst
 		'' now change the opdata to look like
 		''   rdword rd, ptra
 		sets	opdata, dest
-do_opdata_and_sign
+do_opdata_and_sign		
 		setd	opdata, rd
 		mov	jit_instrptr, #opdata
 		call	#emit1
@@ -721,9 +723,6 @@ emit1
 emit2
 		mov	pb, #2
 		jmp	#jit_emit
-emit3
-		mov	pb, #3
-		jmp	#jit_emit
 emit4
 		mov	pb, #4
 		jmp	#jit_emit
@@ -732,9 +731,11 @@ emit4
 		'' code for doing compilation
 		'' called from the JIT engine loop
 		''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+		'' utility called at start of line
 compile_bytecode_start_line
 	_ret_	neg	ptra_reg, #1
 
+		'' compile one opcode
 compile_bytecode
 		' fetch the actual RISC-V opcode
 		rdlong	opcode, ptrb++
@@ -794,7 +795,7 @@ jit_condition	long	0
 
 dis_instr	long	0
 
-		fit	$1ec
+		fit	$1f0
 
 ''
 '' some lesser used routines that can go in HUB memory
@@ -1060,7 +1061,8 @@ skip_uart_read
 		'' implement uart
   		sets	uart_send_instr, rs1
 		mov	jit_instrptr, #uart_send_instr
-		jmp	#emit3		' return from there to caller
+		mov	pb, #3
+		jmp	#jit_emit		' return from there to caller
 
 not_uart
 		cmp	immval, #$1C1 wz

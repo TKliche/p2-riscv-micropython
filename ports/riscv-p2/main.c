@@ -13,8 +13,8 @@
 #include "extmod/vfs_fat.h"
 #include "sdcard.h"
 
-//#define USER_MEMORY 160*1024
-#define USER_MEMORY 128*1024
+#define USER_MEMORY 144*1024
+//#define USER_MEMORY 128*1024
 
 #if MICROPY_ENABLE_COMPILER
 void do_str(const char *src, mp_parse_input_kind_t input_kind) {
@@ -50,7 +50,7 @@ void debug_msg(const char *s)
 STATIC bool init_sdcard_fs(void) {
     bool first_part = true;
 
-    printf("... checking partitions\n");
+    //printf("... checking partitions\n");
     for (int part_num = 1; part_num <= 4; ++part_num) {
         // create vfs object
         fs_user_mount_t *vfs_fat = m_new_obj_maybe(fs_user_mount_t);
@@ -66,7 +66,7 @@ STATIC bool init_sdcard_fs(void) {
 
         if (res != FR_OK) {
             // couldn't mount
-            printf("mount failed, res=%d\n", res);
+            //printf("mount failed, res=%d\n", res);
             m_del_obj(fs_user_mount_t, vfs_fat);
             m_del_obj(mp_vfs_mount_t, vfs);
         } else {
@@ -117,10 +117,8 @@ STATIC bool init_sdcard_fs(void) {
     }
 
     if (first_part) {
-        printf("MPY: can't mount SD card\n");
         return false;
     } else {
-        printf("card mounted\n");
         return true;
     }
 }
@@ -144,16 +142,18 @@ int main(int argc, char **argv) {
     if (sdcard_is_present()) {
         sdcard_power_on();
         mounted_sdcard = init_sdcard_fs();
-        printf(" *** mounted_sdcard = %u\n", (int)mounted_sdcard);
+    }
+    if (mounted_sdcard) {
+        printf("... detected sd card\n");
     }
     #endif
+#ifdef NEVER // for some reason this does not work    
     // set sys.path based on mounted filesystems (/sd is first so it can override /flash)
-    if (0 && mounted_sdcard) {
+    if (mounted_sdcard) {
         mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_sd));
         mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_sd_slash_lib));
     }
-
-    printf("calling repl\n");
+#endif
 #if MICROPY_ENABLE_COMPILER
     #if MICROPY_REPL_EVENT_DRIVEN
     pyexec_event_repl_init();
@@ -185,6 +185,7 @@ void gc_collect(void) {
     //gc_dump_info();
 }
 
+#if !MICROPY_VFS_FAT
 mp_import_stat_t mp_import_stat(const char *path) {
     return MP_IMPORT_STAT_NO_EXIST;
 }
@@ -193,6 +194,7 @@ mp_obj_t mp_builtin_open(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) 
     return mp_const_none;
 }
 MP_DEFINE_CONST_FUN_OBJ_KW(mp_builtin_open_obj, 1, mp_builtin_open);
+#endif
 
 void nlr_jump_fail(void *val) {
     while (1);

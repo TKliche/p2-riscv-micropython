@@ -6,6 +6,14 @@
 
 // options to control how MicroPython is built
 
+// Whether to enable the SD card interface, exposed as pyb.SDCard
+#define MICROPY_HW_ENABLE_SDCARD    (1)
+
+// disk I/O
+#define MICROPY_READER_VFS          (MICROPY_HW_ENABLE_SDCARD)
+#define MICROPY_VFS                 (MICROPY_HW_ENABLE_SDCARD)
+#define MICROPY_VFS_FAT             (MICROPY_HW_ENABLE_SDCARD)
+
 // You can disable the built-in MicroPython compiler by setting the following
 // config option to 0.  If you do this then you won't get a REPL prompt, but you
 // will still be able to execute pre-compiled scripts, compiled with mpy-cross.
@@ -39,6 +47,8 @@
 #define MICROPY_ERROR_REPORTING     (MICROPY_ERROR_REPORTING_NORMAL)
 #define MICROPY_BUILTIN_METHOD_CHECK_SELF_ARG (0)
 #define MICROPY_PY_ASYNC_AWAIT      (0)
+#define MICROPY_PY_BUILTINS_COMPILE    (1)
+#define MICROPY_PY_BUILTINS_EXECFILE (1)
 #define MICROPY_PY_BUILTINS_BYTEARRAY (1)
 #define MICROPY_PY_BUILTINS_MEMORYVIEW (1)
 #define MICROPY_PY_BUILTINS_ENUMERATE (1)
@@ -60,28 +70,32 @@
 #define MICROPY_PY_MATH             (1)
 #define MICROPY_PY_CMATH            (0)
 #define MICROPY_PY_IO               (1)
+#define MICROPY_PY_IO_IOBASE        (1)
+#define MICROPY_PY_IO_FILEIO        (MICROPY_VFS_FAT)
 #define MICROPY_PY_STRUCT           (1)
 #define MICROPY_PY_SYS              (1)
 #define MICROPY_PY_SYS_MAXSIZE      (1)
-#define MICROPY_PY_SYS_STDIO_BUFFER (0)
+#define MICROPY_PY_SYS_STDIO_BUFFER (1)
 #define MICROPY_PY_MACHINE          (1)
 #define MICROPY_CPYTHON_COMPAT      (0)
 #define MICROPY_LONGINT_IMPL        (MICROPY_LONGINT_IMPL_MPZ)
 #define MICROPY_FLOAT_IMPL          (MICROPY_FLOAT_IMPL_FLOAT)
 
-// disk I/O
-#define MICROPY_READER_VFS          (1)
-#define MICROPY_VFS                 (1)
-#define MICROPY_VFS_FAT             (1)
-
-// Whether to enable the SD card interface, exposed as pyb.SDCard
-#define MICROPY_HW_ENABLE_SDCARD (1)
 // Whether to automatically mount (and boot from) the SD card if it's present
 #ifndef MICROPY_HW_SDCARD_MOUNT_AT_BOOT
 #define MICROPY_HW_SDCARD_MOUNT_AT_BOOT (MICROPY_HW_ENABLE_SDCARD)
 #endif
 #define MICROPY_FATFS_RPATH (2)
 #define MICROPY_FATFS_MULTI_PARTITION (1)
+
+// TODO these should be generic, not bound to fatfs
+#define mp_type_fileio mp_type_vfs_fat_fileio
+#define mp_type_textio mp_type_vfs_fat_textio
+
+// use vfs's functions for import stat and builtin open
+#define mp_import_stat mp_vfs_import_stat
+#define mp_builtin_open mp_vfs_open
+#define mp_builtin_open_obj mp_vfs_open_obj
 
 // type definitions for the specific machine
 

@@ -73,6 +73,7 @@
 #define MICROPY_READER_VFS          (1)
 #define MICROPY_VFS                 (1)
 #define MICROPY_VFS_FAT             (1)
+
 // Whether to enable the SD card interface, exposed as pyb.SDCard
 #define MICROPY_HW_ENABLE_SDCARD (1)
 // Whether to automatically mount (and boot from) the SD card if it's present
@@ -80,6 +81,7 @@
 #define MICROPY_HW_SDCARD_MOUNT_AT_BOOT (MICROPY_HW_ENABLE_SDCARD)
 #endif
 #define MICROPY_FATFS_RPATH (2)
+#define MICROPY_FATFS_MULTI_PARTITION (1)
 
 // type definitions for the specific machine
 

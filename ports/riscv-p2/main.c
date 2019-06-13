@@ -144,14 +144,16 @@ int main(int argc, char **argv) {
     if (sdcard_is_present()) {
         sdcard_power_on();
         mounted_sdcard = init_sdcard_fs();
+        printf(" *** mounted_sdcard = %u\n", (int)mounted_sdcard);
     }
     #endif
     // set sys.path based on mounted filesystems (/sd is first so it can override /flash)
-    if (mounted_sdcard) {
+    if (0 && mounted_sdcard) {
         mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_sd));
         mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_sd_slash_lib));
     }
 
+    printf("calling repl\n");
 #if MICROPY_ENABLE_COMPILER
     #if MICROPY_REPL_EVENT_DRIVEN
     pyexec_event_repl_init();

@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <stdio.h>
 #include <string.h>
 
 #include "py/runtime.h"
@@ -193,7 +194,6 @@ static int sdcard_wait_for_status(void)
         i = spi_readresp();
         spi_endcmd();
         if (i == 0) {
-//            iprintf("wait worked on try %d\n", tries);
             return 0;
         }
     }
@@ -238,13 +238,11 @@ bool sdcard_power_on(void) {
     i = spi_cmd(0, 0);
     spi_endcmd();
     if (i < 0) {
-        //iprintf("timeout 1 in init\n");
         return false;
     }
     i = spi_cmd(8, 0x1aa);
     spi_endcmd();
     if (i < 0) {
-        //iprintf("timeout 2 in init\n");
         return false;
     }
     while (1) {
@@ -252,7 +250,6 @@ bool sdcard_power_on(void) {
         i = spi_cmd(41, 0x40000000);
         if (i == 0) break;
         if (i < 0) {
-            //iprintf("timeout in init loop\n");
             return false;
         }
     }
@@ -261,10 +258,10 @@ bool sdcard_power_on(void) {
     spi_endcmd();
     isSDHC = (x >> 6) & 1;
     if (i) {
-//        iprintf("could not init card\n");
+//        printf("could not init card\n");
         return false;
     } else {
-//        iprintf("cmd58 returned 0x%x\n", x);
+//        printf("cmd58 returned 0x%x\n", x);
     }
     i = sdcard_wait_for_status();
     if (i < 0) {
@@ -312,7 +309,7 @@ uint64_t sdcard_get_capacity_in_bytes(void) {
 static int sdcard_read_one_block(uint8_t *dest, uint32_t offset)
 {
     int r, i;
-    if (isSDHC) {
+    if (!isSDHC) {
         offset = offset << 9; // multiply by 512 for non SDHC cards
     }
     spi_cmd(17, offset);
@@ -330,7 +327,7 @@ static int sdcard_read_one_block(uint8_t *dest, uint32_t offset)
 static int sdcard_write_one_block(const uint8_t *src, uint32_t offset)
 {
     int r, i;
-    if (isSDHC) {
+    if (!isSDHC) {
         offset = offset << 9; // multiply by 512 for non SDHC cards
     }
     spi_cmd(24, offset);
@@ -357,6 +354,7 @@ mp_uint_t sdcard_read_blocks(uint8_t *dest, uint32_t start_block, uint32_t num_b
     if (!(pyb_sdmmc_flags & PYB_SDMMC_FLAG_ACTIVE)) {
         return -1;
     }
+    //printf("sdcard_read_blocks: start=%lu num=%lu\n", start_block, num_blocks);
     for (i = 0; i < num_blocks; i++) {
         r = sdcard_read_one_block(dest, start_block);
         if (r) return r;
@@ -469,6 +467,7 @@ STATIC mp_obj_t sd_info(mp_obj_t self) {
     };
     return mp_obj_new_tuple(3, tuple);
 #else
+    printf("*** warning: sd_info ignored\n");
     return mp_const_none;
 #endif
 }
@@ -589,7 +588,7 @@ void sdcard_init_vfs(fs_user_mount_t *vfs, int part) {
     vfs->base.type = &mp_fat_vfs_type;
     vfs->flags |= FSUSER_NATIVE | FSUSER_HAVE_IOCTL;
     vfs->fatfs.drv = vfs;
-//    vfs->fatfs.part = part;
+    vfs->fatfs.part = part;
     vfs->readblocks[0] = MP_OBJ_FROM_PTR(&pyb_sdcard_readblocks_obj);
     vfs->readblocks[1] = MP_OBJ_FROM_PTR(&pyb_sdcard_obj);
     vfs->readblocks[2] = MP_OBJ_FROM_PTR(sdcard_read_blocks); // native version

@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
-#include "board.h"
 
+#include "board.h"
 #include "riscv.h"
 
 void pin_init(void) {

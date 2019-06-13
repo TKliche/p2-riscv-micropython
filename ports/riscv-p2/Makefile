@@ -31,7 +31,7 @@ ifeq ($(CROSS), 1)
 DFU = $(TOP)/tools/dfu.py
 PYDFU = $(TOP)/tools/pydfu.py
 CFLAGS_RISCV = -march=rv32im
-CFLAGS = $(INC) -Wall -Werror -std=c99 -nostdlib $(CFLAGS_RISCV) $(COPT)
+CFLAGS = $(INC) -Wall -Werror -std=c99 -nostdlib $(CFLAGS_RISCV) $(COPT) $(CFLAGS_MOD)
 #LDFLAGS = -nostdlib -T $(LDFILE) -Map=$@.map --cref --gc-sections
 LDFLAGS = -nostdlib -T $(LDFILE) -Map=$@.map --cref 
 CRT0 = $(BUILD)/crt0.o $(BUILD)/setjmp.o
@@ -59,7 +59,9 @@ SRC_C = \
 	uart_core.c \
 	modpyb.c \
 	modpybpin.c \
+	moduos.c \
 	board.c \
+	sdcard.c \
 	vgatext.c \
 	vga_tile_driver.c \
 	OneCogKbM.c \
@@ -69,6 +71,13 @@ SRC_C = \
 	lib/utils/pyexec.c \
 	lib/libc/string0.c \
 	lib/mp-readline/readline.c \
+	lib/oofatfs/ff.c \
+	lib/timeutils/timeutils.c \
+	extmod/vfs.c \
+	extmod/vfs_fat.c \
+	extmod/vfs_fat_diskio.c \
+	extmod/vfs_fat_file.c \
+	extmod/vfs_reader.c \
 
 OBJ = $(CRT0) $(PY_CORE_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
 

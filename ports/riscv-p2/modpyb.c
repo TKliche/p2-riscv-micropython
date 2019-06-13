@@ -31,6 +31,7 @@
 #include "py/mphal.h"
 
 #include "modpyb.h"
+#include "sdcard.h"
 
 extern unsigned int _getcnt();
 extern void _waitcnt(unsigned int x);
@@ -142,6 +143,10 @@ STATIC const mp_rom_map_elem_t pyb_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_delay), MP_ROM_PTR(&pyb_delay_obj) },
     { MP_ROM_QSTR(MP_QSTR_udelay), MP_ROM_PTR(&pyb_udelay_obj) },
 
+#if MICROPY_HW_ENABLE_SDCARD
+    { MP_ROM_QSTR(MP_QSTR_SDCard), MP_ROM_PTR(&pyb_sdcard_type) },
+#endif
+    
 };
 
 STATIC MP_DEFINE_CONST_DICT(pyb_module_globals, pyb_module_globals_table);

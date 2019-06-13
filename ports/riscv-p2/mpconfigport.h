@@ -1,5 +1,7 @@
 #include <stdint.h>
 
+#define MICROPY_PY_SYS_PLATFORM "prop2"
+
 #define MP_SSIZE_MAX (0x7fffffff)
 
 // options to control how MicroPython is built
@@ -67,6 +69,18 @@
 #define MICROPY_LONGINT_IMPL        (MICROPY_LONGINT_IMPL_MPZ)
 #define MICROPY_FLOAT_IMPL          (MICROPY_FLOAT_IMPL_FLOAT)
 
+// disk I/O
+#define MICROPY_READER_VFS          (1)
+#define MICROPY_VFS                 (1)
+#define MICROPY_VFS_FAT             (1)
+// Whether to enable the SD card interface, exposed as pyb.SDCard
+#define MICROPY_HW_ENABLE_SDCARD (1)
+// Whether to automatically mount (and boot from) the SD card if it's present
+#ifndef MICROPY_HW_SDCARD_MOUNT_AT_BOOT
+#define MICROPY_HW_SDCARD_MOUNT_AT_BOOT (MICROPY_HW_ENABLE_SDCARD)
+#endif
+#define MICROPY_FATFS_RPATH (2)
+
 // type definitions for the specific machine
 
 #define MICROPY_MAKE_POINTER_CALLABLE(p) ((void*)((mp_uint_t)(p) | 1))
@@ -90,8 +104,16 @@ typedef long mp_off_t;
 
 // extra builtin modules to add to the list of known ones
 extern const struct _mp_obj_module_t pyb_module;
+extern const struct _mp_obj_module_t uos_module;
+
 #define MICROPY_PORT_BUILTIN_MODULES \
     { MP_ROM_QSTR(MP_QSTR_pyb), MP_ROM_PTR(&pyb_module) }, \
+    { MP_ROM_QSTR(MP_QSTR_os), MP_ROM_PTR(&uos_module) }, \
+
+#define MICROPY_PORT_BUILDIN_MODULE_WEAK_LINKS \
+    { MP_ROM_QSTR(MP_QSTR_errno), MP_ROM_PTR(&mp_module_uerrno) }, \
+    { MP_ROM_QSTR(MP_QSTR_io), MP_ROM_PTR(&mp_module_io) }, \
+    { MP_ROM_QSTR(MP_QSTR_uos), MP_ROM_PTR(&uos_module) },       \
 
 // We need to provide a declaration/definition of alloca()
 #include <alloca.h>

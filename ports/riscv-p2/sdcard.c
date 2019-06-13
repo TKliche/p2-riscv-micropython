@@ -209,13 +209,16 @@ void sdcard_init(void) {
     
     dirl_(PIN_MISO);
     dirh_(PIN_CLK);
-    dirh_(PIN_MOSI);
     drvh_(PIN_SS);
-    drvh_(PIN_MOSI);
 }
 
 bool sdcard_is_present(void) {
-    int i = getpin(PIN_TEST);
+    int i;
+
+    if (pyb_sdmmc_flags & PYB_SDMMC_FLAG_ACTIVE) {
+        return true;
+    }
+    i = getpin(PIN_TEST);
     return (i == 0);
 }
 
@@ -226,6 +229,8 @@ bool sdcard_power_on(void) {
     if (pyb_sdmmc_flags & PYB_SDMMC_FLAG_ACTIVE) {
         return true;
     }
+    dirh_(PIN_MOSI);
+    drvh_(PIN_MOSI);
     for (i = 0; i < 600; i++) {
         (void) spi_read();
     }
@@ -272,7 +277,9 @@ bool sdcard_power_on(void) {
 
 void sdcard_power_off(void) {
     pyb_sdmmc_flags &= ~PYB_SDMMC_FLAG_ACTIVE;
-}
+    drvl_(PIN_MOSI);
+    dirl_(PIN_MOSI);
+ }
 
 uint64_t sdcard_get_capacity_in_bytes(void) {
     uint64_t c_size;

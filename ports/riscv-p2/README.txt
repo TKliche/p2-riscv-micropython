@@ -88,6 +88,19 @@ You can run a script from a file via something like:
 execfile("perftest.py")
 ```
 
+### Manual detection of SD Cards
+
+Sometimes the SD card isn't automatically detected. In that case you
+can force it on by doing:
+```
+sd=pyb.SDCard()
+sd.power(1)
+```
+This should return `True` if a card is detected and initialized
+properly. You can also see if a card is found by checking
+`sd.present()`, which will be true or false. Once the card is detected
+you can manually mount it as described above.
+
 ## Other Notes
 
 ### Performance

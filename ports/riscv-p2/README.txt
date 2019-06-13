@@ -83,6 +83,11 @@ os.mount(sd, '/sd')
 os.chdir('/sd')
 ```
 
+You can run a script from a file via something like:
+```
+execfile("perftest.py")
+```
+
 ## Other Notes
 
 ### Performance
@@ -98,7 +103,10 @@ def perfTest():
   print("Count: ", count)
 
 
-p2.binary:    53057
-p2emu.binary: 29742
-p2trace:      96691
+p2.binary:    47333
+p2emu.binary: 29760
+p2trace:     258000
 ```
+
+The p2trace version has the widest variation in performance, since the
+cache is less deterministic.

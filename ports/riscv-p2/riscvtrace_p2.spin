@@ -42,6 +42,9 @@ CON
   HIBIT = $80000000
 
   RV_SIGNOP_BITNUM = 30		' RISCV bit for changing shr/sar
+
+  COMMUTATIVE_CHECK_BITNUM = 9
+  XOR_CHECK_BITNUM = 10
   
 DAT
 		org 0
@@ -81,6 +84,7 @@ x14		call	#jit_init
 x15		jmp	#startup
 
 x16		long	0[16]
+
 		'' these registers must immediately follow x0-x31
 x32
 opcode		long	0
@@ -153,6 +157,8 @@ optable
 
 sardata		sar	0,0
 subdata		sub	0,0
+negdata		neg	0,0
+notdata		not	0,0
 
 		'' code for typical reg-reg functions
 		'' such as add r0,r1
@@ -173,7 +179,6 @@ regfunc
 nosar
 		'' check for immediates
 		test	opcode, #$20 wz
-		andn	opdata, #$1ff	' zero out source in template instruction
 	if_nz	jmp	#reg_reg
 		bith	opdata, #IMM_BITNUM
 
@@ -181,35 +186,29 @@ nosar
 		' can be translated as mv x0, N
 		' we can tell it's an add because it will have WZ_BITNUM set
 		testb	opdata, #WZ_BITNUM wc
-	if_c	jmp	#handle_addi
+	if_c	jmp	#hub_handle_addi
 reg_imm
+		' special case:
+		' xori rA, rB, #-1
+		' -> not rA, rB
+		testb	opdata, #XOR_CHECK_BITNUM wc
+	if_c	jmp	#check_xor
+
 		'
 		' emit an immediate instruction with optional large prefix
 		' and with dest being the result
 		'
+continue_imm
 		mov	dest, rd
 		call	#emit_mov_rd_rs1
 		jmp	#emit_big_instr
-
-		' handle addi instruction specially
-		' if we get addi R, x0, N
-		' we emit mov R, #N instead
-		' similarly addi R, N, 0
-		' can become mov R, N
-handle_addi
-		cmp	immval, #0 wcz
-	if_z	jmp	#emit_mov_rd_rs1
-		cmp	rs1, #x0 wz
-	if_z	mov	dest, rd
-	if_z	jmp	#emit_mvi
-		' convert addi A, B, -N to sub A, B, N
-		cmp	immval, #0 wcz
-	if_ae	jmp	#reg_imm
-		neg	immval
-		mov	opdata, subdata
-		bith	opdata, #IMM_BITNUM
-		jmp	#reg_imm
-
+check_xor
+		cmp	immval, ALLBITS wz
+	if_nz	jmp	#continue_imm
+		mov	opdata, notdata
+		setd	opdata, rd
+		sets	opdata, rs1
+		jmp	#emit_opdata_and_ret
 		'
 		' register<-> register operation
 		'
@@ -227,8 +226,27 @@ reg_reg
 	if_nc	jmp	#nosub
 		testb	opcode, #RV_SIGNOP_BITNUM  wc	' need sub instead of add?
 	if_c	mov	opdata, subdata
+		' check for special case:
+		' sub xA, x0, xB -> neg xA, xB
+		cmp   rs1, #0 wz
+	if_z	mov   opdata, negdata
+	if_z	mov   rs1, rd
 nosub
 		'
+		' compiling OP rd, rs1, rs2
+		'
+
+		' if commutative and rd == rs2, we can compile
+		'   OP rd, rs1
+		'
+		testb	opdata, #9 wc
+	if_nc	jmp	#not_commutative
+		cmp	rd, rs2 wz
+	if_nz	jmp	#not_commutative
+		mov	rs2, rs1
+		mov	rs1, rd		' same as old rs2
+		jmp	#noaltr
+not_commutative
 		' if rd is not the same as rs1, we have
 		' to issue an ALTR 0, #rd
 		'
@@ -255,7 +273,7 @@ altr_op
 ''    call #routine
 ''    mov <rd>, dest
 multab
-	call	#\imp_mul
+	long	0	' special case ' call	#\imp_mul
 	call	#\illegalinstr
 	call	#\illegalinstr
 	call	#\imp_muluh
@@ -263,7 +281,12 @@ multab
 	call	#\imp_divu
 	call	#\imp_rem
 	call	#\imp_remu
-	
+
+imp_mul
+	qmul	rs1, rs2
+    	getqx	rd
+
+
 mul_templ
 	mov	rs1, 0-0
 	mov	rs2, 0-0
@@ -303,98 +326,19 @@ sltfunc_pat
 
 SIGNBYTE	long	$FFFFFF00
 SIGNWORD	long	$FFFF0000
+ALLBITS		long	$FFFFFFFF
 
 storeop
 		'' RISC-V has store value in rs2, we want it in rd
 		andn	immval, #$1f
 		or	immval, rd
 		mov	rd, rs2
-		jmp	#ldst_common
+		jmp	#hub_ldst_common
 loadop
 		cmp	rd, #0	wz	' if rd == 0, emit nop
 	if_z	jmp	#emit_nop
-ldst_common
-		mov	signmask, opdata	' save if we need sign mask
-		cmp	immval, #0 wz
-	if_nz	jmp	#ldst_need_offset
-		mov	dest, rs1
-		jmp	#final_ldst
-ldst_need_offset
-		' if this is an offset ld/st instruction,
-		' then copy the base register into ptra
-		' mov ptra, rs1
-		' wrbyte rd, ptra[immval]
-		' can skip the "mov" if ptra already holds
-		' rs1
-		cmp	ptra_reg, rs1 wz
-	if_z	jmp	#skip_ptra_mov
-		mov	ptra_reg, rs1
-		sets	mov_to_ptra, rs1
-		mov	jit_instrptr, #mov_to_ptra
-		call	#emit1		
-skip_ptra_mov
-		'' check to see if we're about to trash the register we
-		'' think is in ptra
-		cmp	 rd, ptra_reg wz
-	if_z	neg	 ptra_reg, #1
-		'' see if this is a short offset
-		mov	temp, #15
-		' note: low bits of func3 == 0 for byte, 1 for word, 2 for long
-		' which is what we want
-		and	func3, #3
-		shl	temp, func3
-		cmp	immval, temp wcz
-	if_a	jmp	#big_offset
-		shr	immval, func3	' now immval is between 0 and 15
-		'
-		' OK, we can emit a simple
-		' rdlong rd, ptra[immval]
-		'
-		or	immval, #%1000_00000	' SUP mode for ptra[immval]
-		sets	opdata, immval
-		bith	opdata, #IMM_BITNUM	' change to imm mode
+		jmp	#hub_ldst_common
 		
-		jmp	#do_opdata_and_sign
-big_offset
-		'
-		' here we have a big offset
-		'
-		and	immval, LOC_MASK	' isolate offset 20 bits
-		sets	opdata, immval
-		setd	opdata, rd
-		bith	opdata, #IMM_BITNUM	' change to imm mode
-		mov	aug_io+1, opdata
-		
-		' set up the augmented prefix
-		shr	immval, #9
-		andn	aug_io, ##$7ff	' clear out bottom 11 bits of augment
-		or	aug_io, immval
-		mov	jit_instrptr, #aug_io
-		call	#emit2
-		jmp	#check_for_signext
-		
-final_ldst
-		'' now the actual rd/wr instruction
-		'' opdata contains a template like
-		''   rdword SIGNWORD, loadop wc
-		''
-		'' now change the opdata to look like
-		''   rdword rd, ptra
-		sets	opdata, dest
-do_opdata_and_sign		
-		setd	opdata, rd
-		mov	jit_instrptr, #opdata
-		call	#emit1
-check_for_signext
-		shr	signmask, #9
-		and	signmask, #$1ff wz	' check for sign mask
-		'' see if we need a sign extension instruction
-	if_z	ret
-		setd	signext_instr, rd
-		sets	signext_instr, signmask
-		mov	jit_instrptr, #signext_instr
-		mov	pb, #1
-		jmp	#jit_emit
 
 mov_to_ptra
 		mov	ptra, 0-0
@@ -653,16 +597,18 @@ ptra_reg	long	-1	' register contained in ptra
 start_of_tables
 ''''' math indirection table
 '' upper bits are acutlly instructions we wish to use
-'' dest bits contain flags: 2 -> test for shr/sar 
+'' dest bits contain flags: 1 -> operation is commutative
+''                          2 -> operation is xor
+
 mathtab
-		add	0,regfunc    wz	' wz indicates we want add/sub
+		add	1,regfunc    wz	' wz indicates we want add/sub
 		shl	0,regfunc    wc ' wc indicates to regfunct that it's a shift
 		cmps	0,sltfunc    wcz
 		cmp	0,sltfunc    wcz
-		xor	0,regfunc
+		xor	3,regfunc
 		shr	0,regfunc    wc	' wc indicates we want shr/sar
-		or	0,regfunc
-		and	0,regfunc
+		or	1,regfunc
+		and	1,regfunc
 loadtab
 		rdbyte	SIGNBYTE, loadop wc
 		rdword	SIGNWORD, loadop wc
@@ -826,10 +772,6 @@ startup
 '=========================================================================
 ' MATH ROUTINES
 '=========================================================================
-imp_mul
-		qmul	rs1, rs2
-    _ret_	getqx	rd
-
 imp_muluh
 		qmul	rs1, rs2
     _ret_	getqy	rd
@@ -870,6 +812,92 @@ imp_div
 		testb	divflags, #31 wc	' check sign
 	_ret_	negc	rd
 
+hub_ldst_common
+		mov	signmask, opdata	' save if we need sign mask
+		cmp	immval, #0 wz
+	if_nz	jmp	#ldst_need_offset
+		mov	dest, rs1
+		jmp	#final_ldst
+ldst_need_offset
+		' if this is an offset ld/st instruction,
+		' then copy the base register into ptra
+		' mov ptra, rs1
+		' wrbyte rd, ptra[immval]
+		' can skip the "mov" if ptra already holds
+		' rs1
+		cmp	ptra_reg, rs1 wz
+	if_z	jmp	#skip_ptra_mov
+		mov	ptra_reg, rs1
+		sets	mov_to_ptra, rs1
+		mov	jit_instrptr, #mov_to_ptra
+		call	#emit1		
+skip_ptra_mov
+		'' check to see if we're about to trash the register we
+		'' think is in ptra
+		cmp	 rd, ptra_reg wz
+	if_z	neg	 ptra_reg, #1
+		'' see if this is a short offset
+		mov	temp, #15
+		' note: low bits of func3 == 0 for byte, 1 for word, 2 for long
+		' which is what we want
+		and	func3, #3
+		mov	temp, immval
+		sar	temp, func3
+		cmps	temp, #15 wcz
+	if_a	jmp	#big_offset
+		cmps	temp, ##-15 wcz
+	if_b	jmp	#big_offset
+		and	temp, #$1f
+		mov	immval, temp
+		'
+		' OK, we can emit a simple
+		' rdlong rd, ptra[immval]
+		'
+		or	immval, #%1000_00000	' SUP mode for ptra[immval]
+		sets	opdata, immval
+		bith	opdata, #IMM_BITNUM	' change to imm mode
+		
+		jmp	#do_opdata_and_sign
+big_offset
+		'
+		' here we have a big offset
+		'
+		and	immval, LOC_MASK	' isolate offset 20 bits
+		sets	opdata, immval
+		setd	opdata, rd
+		bith	opdata, #IMM_BITNUM	' change to imm mode
+		mov	aug_io+1, opdata
+		
+		' set up the augmented prefix
+		shr	immval, #9
+		andn	aug_io, ##$7ff	' clear out bottom 11 bits of augment
+		or	aug_io, immval
+		mov	jit_instrptr, #aug_io
+		call	#emit2
+		jmp	#check_for_signext
+		
+final_ldst
+		'' now the actual rd/wr instruction
+		'' opdata contains a template like
+		''   rdword SIGNWORD, loadop wc
+		''
+		'' now change the opdata to look like
+		''   rdword rd, ptra
+		sets	opdata, dest
+do_opdata_and_sign		
+		setd	opdata, rd
+		mov	jit_instrptr, #opdata
+		call	#emit1
+check_for_signext
+		shr	signmask, #9
+		and	signmask, #$1ff wz	' check for sign mask
+		'' see if we need a sign extension instruction
+	if_z	ret
+		setd	signext_instr, rd
+		sets	signext_instr, signmask
+		mov	jit_instrptr, #signext_instr
+		mov	pb, #1
+		jmp	#jit_emit
 
 emit_mvi
 		cmp	immval, #0 wcz
@@ -898,14 +926,40 @@ emit_big_instr
 '
 hub_muldiv
 	alts	func3, #multab
-	mov	temp, 0-0
+	mov	temp, 0-0 wz
+if_z	jmp	#handle_mul
 	sets	mul_templ, rs1
 	sets	mul_templ+1, rs2
 	mov	mul_templ+2, temp
 	setd	mul_templ+3, rd
 	mov	jit_instrptr, #mul_templ
 	jmp	#emit4
-	
+handle_mul
+	sets	imp_mul, rs1
+	setd	imp_mul, rs2
+	setd	imp_mul+1, rd
+	mov	jit_instrptr, #imp_mul
+	jmp	#emit2
+
+		' handle addi instruction specially
+		' if we get addi R, x0, N
+		' we emit mov R, #N instead
+		' similarly addi R, N, 0
+		' can become mov R, N
+hub_handle_addi
+		cmp	immval, #0 wcz
+	if_z	jmp	#emit_mov_rd_rs1
+		cmp	rs1, #x0 wz
+	if_z	mov	dest, rd
+	if_z	jmp	#emit_mvi
+		' convert addi A, B, -N to sub A, B, N
+		cmp	immval, #0 wcz
+	if_ae	jmp	#reg_imm
+		neg	immval
+		mov	opdata, subdata
+		bith	opdata, #IMM_BITNUM
+		jmp	#reg_imm
+
 hub_condbranch		
 		test	func3, #%100 wz
 	if_z	mov	jit_condition, #%1010	' IF_Z

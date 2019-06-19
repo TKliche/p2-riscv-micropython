@@ -13,6 +13,7 @@
 #define UART 0xBC0
 #define WAITCYC 0xBC1
 #define DBGPRNT 0xBC2
+#define MILLIS_CSR 0xBC3
 #define CNT  0xC00
 #define CNTH 0xC80
 
@@ -65,7 +66,7 @@
 #define getcnt() csr_read(CNT)
 #define getcnth() csr_read(CNTH)
 #define waitcnt(tim) csr_write(WAITCYC, tim)
-
+#define getmillis() csr_read(MILLIS_CSR)
 #define trigger_debug() csr_read(DBGPRNT)
 
 // NOTE:
@@ -159,6 +160,22 @@
     ({                                                  \
         unsigned long v;                                \
         __asm__ __volatile__ (".insn r CUSTOM_1, 1, 0, %0, %1, x3" \
+                              : "=r"(v) : "r"(a)  );    \
+        v;                                                  \
+    })
+
+#define getrnd()                                        \
+    ({                                                  \
+        unsigned long v;                                \
+        __asm__ __volatile__ (".insn r CUSTOM_1, 1, 0, %0, %0, x27" \
+                              : "=r"(v)  );    \
+        v;                                              \
+    })
+
+#define waitx(a)                                     \
+    ({                                                  \
+        unsigned long v;                                \
+        __asm__ __volatile__ (".insn r CUSTOM_1, 1, 0, %0, %1, x31" \
                               : "=r"(v) : "r"(a)  );    \
         v;                                                  \
     })

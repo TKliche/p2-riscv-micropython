@@ -18,6 +18,8 @@
       7Fx - COG registers 1F0-1FF
       BC0 - UART register
       BC1 - wait register  (writing here causes us to wait until a particular cycle)
+      BC2 - debug register (writing here dumps debug info to serial)
+      BC3 - millisecond timer (32 bits caculated from the cycle counter)
       C00 - cycle counter
       C80 - cycle counter high
       
@@ -182,18 +184,25 @@ nosar
 	if_nz	jmp	#reg_reg
 		bith	opdata, #IMM_BITNUM
 
-		' special case: addi xa, x0, N
-		' can be translated as mv x0, N
-		' we can tell it's an add because it will have WZ_BITNUM set
-		testb	opdata, #WZ_BITNUM wc
-	if_c	jmp	#hub_handle_addi
-reg_imm
 		' special case:
 		' xori rA, rB, #-1
 		' -> not rA, rB
 		testb	opdata, #XOR_CHECK_BITNUM wc
 	if_c	jmp	#check_xor
 
+		' special case: addi xa, x0, N
+		' can be translated as mv x0, N
+		' we can tell it's an add because it will have WZ_BITNUM set
+		testb	opdata, #WZ_BITNUM wc
+	if_nc	jmp	#continue_imm
+		' for addi
+		cmps	immval, #0 wcz
+	if_z	jmp	#emit_mov_rd_rs1
+	if_b	jmp	#handle_subi
+		cmp	rs1, #x0 wz
+	if_z	mov	dest, rd
+	if_z	jmp	#emit_mvi
+	
 		'
 		' emit an immediate instruction with optional large prefix
 		' and with dest being the result
@@ -425,7 +434,8 @@ skip_write
 		andn	immval, #1  	' clear low bit
 		muxc	immval, ##(1<<11)
 		add	immval, ptrb	' calculate branch target
-		mov	jit_condition, #$F	    ' unconditional jump 		
+		mov	jit_condition, #$F	    ' unconditional jump
+		sub	immval, #4     	' adjust for PC offset
 		jmp	#issue_branch_cond
 
 jalr
@@ -547,6 +557,9 @@ coginit_pattern
 		
 calldebug
 		call	#\debug_print
+callmillis
+		call	#\getmillis	' get milliseconds into dest
+		mov	0-0, dest
 getct_pat
 		getct	0-0
 getcth_pat
@@ -601,14 +614,14 @@ start_of_tables
 ''                          2 -> operation is xor
 
 mathtab
-		add	1,regfunc    wz	' wz indicates we want add/sub
-		shl	0,regfunc    wc ' wc indicates to regfunct that it's a shift
+adddata		add	1,regfunc    wz	' wz indicates we want add/sub
+shldata		shl	0,regfunc    wc ' wc indicates to regfunct that it's a shift
 		cmps	0,sltfunc    wcz
-		cmp	0,sltfunc    wcz
-		xor	3,regfunc
-		shr	0,regfunc    wc	' wc indicates we want shr/sar
-		or	1,regfunc
-		and	1,regfunc
+cmpdata		cmp	0,sltfunc    wcz
+xordata		xor	3,regfunc
+shrdata		shr	0,regfunc    wc	' wc indicates we want shr/sar
+ordata		or	1,regfunc
+anddata		and	1,regfunc
 loadtab
 		rdbyte	SIGNBYTE, loadop wc
 		rdword	SIGNWORD, loadop wc
@@ -616,12 +629,12 @@ loadtab
 		and	0, illegalinstr
 		rdbyte	0, loadop
 		rdword	0, loadop
-		rdlong	0, loadop
+ldlongdata	rdlong	0, loadop
 		and	0, illegalinstr
 storetab
 		wrbyte	0, storeop
 		wrword	0, storeop
-		wrlong	0, storeop
+swlongdata	wrlong	0, storeop
 		and	0, illegalinstr
 		and	0, illegalinstr
 		and	0, illegalinstr
@@ -683,10 +696,13 @@ compile_bytecode_start_line
 
 		'' compile one opcode
 compile_bytecode
+		' if last instruction modified ptra_reg, then invalidate it
+		cmp	rd, ptra_reg wz
+	if_z	neg	ptra_reg, #1
 		' fetch the actual RISC-V opcode
 		rdlong	opcode, ptrb++
 		test	opcode, #3 wcz
-  if_z_or_c	jmp	#illegalinstr		' low bits must both be 3
+  if_z_or_c	jmp	#hub_compressed_instr		' low bits must both be 3; otherwise a 16 bit instruction
   
     		'' decode instruction
 		mov	immval, opcode
@@ -702,9 +718,6 @@ compile_bytecode
 		mov	rd, opcode
 		shr	rd, #7
 		and	rd, #$1f
-		'' check for modifying ptra_reg
-		cmp	rd, ptra_reg wz
-	if_z	neg	ptra_reg, #1
 	
 		'' now look up in table
 		mov	temp, opcode
@@ -935,30 +948,34 @@ if_z	jmp	#handle_mul
 	mov	jit_instrptr, #mul_templ
 	jmp	#emit4
 handle_mul
-	sets	imp_mul, rs1
-	setd	imp_mul, rs2
+	setd	imp_mul, rs1
+	sets	imp_mul, rs2
 	setd	imp_mul+1, rd
 	mov	jit_instrptr, #imp_mul
 	jmp	#emit2
 
+#ifdef NEVER
 		' handle addi instruction specially
 		' if we get addi R, x0, N
 		' we emit mov R, #N instead
 		' similarly addi R, N, 0
 		' can become mov R, N
 hub_handle_addi
-		cmp	immval, #0 wcz
+		cmps	immval, #0 wcz
 	if_z	jmp	#emit_mov_rd_rs1
+	if_b	jmp	#handle_subi
 		cmp	rs1, #x0 wz
 	if_z	mov	dest, rd
 	if_z	jmp	#emit_mvi
+		jmp	#continue_imm
+#endif
+
 		' convert addi A, B, -N to sub A, B, N
-		cmp	immval, #0 wcz
-	if_ae	jmp	#reg_imm
+handle_subi
 		neg	immval
 		mov	opdata, subdata
 		bith	opdata, #IMM_BITNUM
-		jmp	#reg_imm
+		jmp	#continue_imm
 
 hub_condbranch		
 		test	func3, #%100 wz
@@ -984,6 +1001,9 @@ hub_condbranch
 		bitc	immval, #11
 		andn	immval, #1
 		add	immval, ptrb
+		'' BEWARE! ptrb has stepped up by 4 or 2, so we need to
+		'' adjust accordingly
+		sub	immval, #4
 
 		''
 		'' issue a conditional branch to the value in
@@ -991,22 +1011,26 @@ hub_condbranch
 		'' jit_condition has the P2 flags to use for the condition
 		'' ($F for unconditional branch)
 		''
-issue_branch_cond		
-		'' BEWARE! ptrb has stepped up by 4, so we need to
-		'' adjust accordingly
-		sub	immval, #4
+issue_branch_cond
 
 		' and go create the branch
-		mov	jit_instrptr, immval
+		mov	jit_branch_dest, immval
 		jmp	#jit_emit_direct_branch
 
+c_illegalinstr
+		mov	immval, ptrb
+		add	immval, #2
+		jmp	#do_illegal
+		
 hub_illegalinstr
 		mov	immval, ptrb
+do_illegal
 		call	#emit_pc_immval_minus_4
 		mov	jit_instrptr, #imp_illegal
-		mov	pb, #1
-		jmp	#jit_emit
-
+		call	#emit1
+		mov	jit_condition, #0
+		jmp	#jit_emit_direct_branch
+		
 hub_compile_auipc
 		mov	immval, opcode
 		and	immval, LUI_MASK
@@ -1131,6 +1155,15 @@ not_wait
 		mov	jit_instrptr, #calldebug
 		jmp	#emit1
 not_debug
+		cmp	immval, #$1C3 wz	' get millisecond count
+	if_nz	jmp	#not_millis
+		cmp	rd, #0 wz
+	if_z	jmp	#emit_nop
+	
+		mov	jit_instrptr, #callmillis
+		setd	callmillis+1, rd
+		jmp	#emit2
+not_millis
 		jmp	#illegalinstr
 
 		' enter with ptrb holding pc
@@ -1142,6 +1175,19 @@ illegal_instr_error
 die
 		jmp	#die
 
+		' calculate elapsed milliseconds into dest
+getmillis
+		mov	dest, cycleh
+		getct	temp
+		cmp	dest, cycleh wz
+	if_nz	jmp	#getmillis
+		' now we have a 64 bit number (dest, cycleh)
+		' want to divide this by 160_000 to get milliseconds
+		setq	dest
+		qdiv	temp, ##(_CYCLES_PER_SEC/1000)
+		getqx	dest
+		ret
+		
 		' create a checksum of memory
 		' (uart_num, info2) are checksum
 		' pa = start of mem block
@@ -1311,17 +1357,6 @@ hub_rdpininstr
 		jmp	#emit_opdata_and_ret
 		
 hub_coginitinstr
-#ifdef FIXME
-		mov	uart_num, immval
-		call	#ser_hex
-		mov	uart_num, rs2
-		call	#ser_hex
-		mov	uart_num, rs1
-		call	#ser_hex
-		mov	uart_num, rd
-		call	#ser_hex
-		call	#ser_nl
-#endif
 		shr	immval, #5	' skip over rs2
 		mov	func2, immval
 		and	func2, #3 wz
@@ -1345,6 +1380,397 @@ hub_coginitinstr
 
 hub_singledestinstr
 		jmp	#illegalinstr
+
+hub_compressed_instr
+		sub	ptrb, #2	' adjust for compressed instruction
+		andn	opcode, SIGNWORD wz
+	if_z	jmp	#c_illegalinstr
+#ifdef DEBUG_ENGINE
+		call	#ser_nl
+		mov	uart_char, #"<"
+		call	#ser_tx
+		mov	uart_num, opcode
+		call	#ser_hex
+#endif
+		mov	temp, opcode
+		mov	dest, opcode
+		shr	dest, #13
+		and	dest, #7
+		and	temp, #3
+		shl	temp, #3
+		or	dest, temp	' dest now contains opcode | func3
+#ifdef DEBUG_ENGINE
+		mov	uart_num, dest
+		call	#ser_hex
+#endif
+		shl	dest, #2
+		add	dest, ##@rvc_jmptab
+		jmp	dest
+
+rvc_jmptab
+		jmp	#c_addi4spn	' 00 000
+		jmp	#c_illegalinstr	' 00 001
+		jmp	#c_lw		' 00 010
+		jmp	#c_illegalinstr	' 00 011
+		jmp	#c_illegalinstr	' 00 100
+		jmp	#c_illegalinstr	' 00 101
+		jmp	#c_sw		' 00 110
+		jmp	#c_illegalinstr	' 00 111
+
+		jmp	#c_addi		' 01 000
+		jmp	#c_jal		' 01 001
+		jmp	#c_li		' 01 010
+		jmp	#c_lui		' 01 011
+		jmp	#c_math		' 01 100
+		jmp	#c_j		' 01 101
+		jmp	#c_beqz		' 01 110
+		jmp	#c_bnez		' 01 111
+
+		jmp	#c_slli		' 10 000
+		jmp	#c_illegalinstr	' 10 001
+		jmp	#c_lwsp		' 10 010
+		jmp	#c_illegalinstr	' 10 011
+		jmp	#c_mv		' 10 100
+		jmp	#c_illegalinstr	' 10 101
+		jmp	#c_swsp		' 10 110
+		jmp	#c_illegalinstr	' 10 111
+
+c_addi4spn
+		mov	rd, opcode
+		shr	rd, #2
+		and	rd, #7
+		add	rd, #x8
+		mov	rs1, #x2
+		mov	immval, #0
+		testb	opcode, #5 wc
+		bitc	immval, #3
+		testb	opcode, #6 wc
+		bitc	immval, #2
+		testb	opcode, #7 wc
+		bitc	immval, #6
+		testb	opcode, #8 wc
+		bitc	immval, #7
+		testb	opcode, #9 wc
+		bitc	immval, #8
+		testb	opcode, #10 wc
+		bitc	immval, #9
+		testb	opcode, #11 wc
+		bitc	immval, #4
+		testb	opcode, #12 wc
+		bitc	immval, #5
+		mov	opdata, adddata
+		bith	opdata, #IMM_BITNUM
+		jmp	#continue_imm
+
+c_addi
+		mov	rd, opcode
+		shr	rd, #7
+		and	rd, #$1f wz
+	if_z	jmp	#emit_nop
+		mov	immval, opcode
+		testb	immval, #12 wc
+		muxc	immval, #$80
+		shl	immval, #24
+		sar	immval, #26
+		abs	immval wc
+	if_nc	mov	opdata, adddata
+	if_c	mov	opdata, subdata
+		bith	opdata, #IMM_BITNUM
+		setd	opdata, rd
+		sets	opdata, immval
+		mov	jit_instrptr, #opdata
+		jmp	#emit1
+
+c_li
+		mov	rd, opcode
+		shr	rd, #7
+		and	rd, #$1f wz
+	if_z	jmp	#emit_nop
+		mov	immval, opcode
+		shr	immval, #2
+		and	immval, #$1f
+		testb	opcode, #12 wc
+		bitc	immval, #5
+		signx	immval, #5
+		abs	immval wc
+	if_nc	mov	opdata, mov_pat
+	if_c	mov	opdata, negdata
+		bith	opdata, #IMM_BITNUM
+		setd	opdata, rd
+		sets	opdata, immval
+		mov	jit_instrptr, #opdata
+		jmp	#emit1
+		
+c_mv
+		mov	rd, opcode
+		shr	rd, #7
+		and	rd, #$1f wz
+	if_z	jmp	#c_illegalinstr		' actually should be C_EBREAK
+		mov	rs2, opcode
+		shr	rs2, #2
+		and	rs2, #$1f wz
+	if_z	jmp	#c_jr
+		' c_mv or c_add
+		testb	opcode, #12 wc
+	if_c	mov	opdata, adddata
+	if_nc	mov	opdata, mov_pat
+		sets	opdata, rs2
+		setd	opdata, rd
+		mov	jit_instrptr, #opdata
+		jmp	#emit1
+
+		' jump and/or jalr to rd
+c_jr
+		' if jalr, then
+		' emit code to save ptrb in x1
+		testb	opcode, #12 wc
+	if_c	mov    immval, ptrb
+	if_c	mov    dest, #x1
+	if_c	call   #emit_mvi
+
+		' generate code to copy final destination into ptrb
+		sets	imp_jalr_nooff, rd
+		mov	jit_instrptr, #imp_jalr_nooff
+		call	#emit1
+
+		' now generate the branch
+		mov	jit_condition, #$f
+		jmp	#jit_emit_indirect_branch
+		
+
+c_jal
+		' emit code to save ptrb in x1
+		mov    immval, ptrb
+		mov    dest, #x1
+		call   #emit_mvi
+		'' fall through
+c_j
+		mov	immval, opcode
+		shr	immval, #2
+		andn	immval, #1
+		testb	opcode, #2 wc
+		bitc	immval, #5
+		testb	opcode, #6 wc
+		bitc	immval, #7
+		testb	opcode, #7 wc
+		bitc	immval, #6
+		testb	opcode, #8 wc
+		bitc	immval, #10
+		testb	opcode, #9 wc
+		bitc	immval, #8
+		testb	opcode, #10 wc
+		bitc	immval, #9
+		testb	opcode, #11 wc
+		bitc	immval, #4
+		testb	opcode, #12 wc
+		bitc	immval, #11
+		signx	immval, #11
+		sub	immval, #2
+		add	immval, ptrb
+		mov	jit_branch_dest, immval
+		mov	jit_condition, #$f
+		jmp	#jit_emit_direct_branch
+c_lui
+		mov	rd, opcode
+		shr	rd, #7
+		and	rd, #$1f wz
+	if_z	jmp	#emit_nop
+		cmp	rd, #2 wz
+	if_z	jmp	#c_addi16sp
+	
+		mov	immval, opcode
+		shr	immval, #2
+		and	immval, #$1f
+		shl	immval, #12
+		testb	opcode, #12 wc
+		bitc	immval, #17	' copy sign bit to bit 17
+		signx	immval, #17
+		mov	dest, rd
+		jmp	#emit_mvi
+		
+c_addi16sp
+		mov	immval, #0
+		testb	opcode, #2 wc
+		bitc	immval, #5
+		testb	opcode, #3 wc
+		bitc	immval, #7
+		testb	opcode, #4 wc
+		bitc	immval, #8
+		testb	opcode, #5 wc
+		bitc	immval, #6
+		testb	opcode, #6 wc
+		bitc	immval, #4
+		testb	opcode, #12 wc
+		bitc	immval, #9
+		signx	immval, #9
+'		mov	rd, #x2		' rd was already set to x2
+		mov	rs1, #x2
+		mov	opdata, adddata
+		bith	opdata, #IMM_BITNUM		
+		jmp	#continue_imm
+
+c_swsp
+		mov	rd, opcode
+		shr	rd, #2
+		and	rd, #$1f
+		mov	opdata, swlongdata
+		mov	immval, opcode
+		' bits 7-12 of immval contain imm[5:2|7:6]
+		shr	immval, #9
+		and	immval, #$f
+		shl	immval, #2
+		testb	opcode, #7 wc
+		bitc	immval, #6
+		testb	opcode, #8 wc
+		bitc	immval, #7
+		mov	rs1, #x2
+		mov	func3, #2
+		jmp	#hub_ldst_common
+c_lwsp
+		mov	func3, #2
+		mov	rd, opcode
+		shr	rd, #7
+		and	rd, #$1f wz
+	if_z	jmp	#emit_nop
+		mov	immval, opcode
+		shr	immval, #4
+		and	immval, #7
+		shl	immval, #2
+		testb	opcode, #2 wc
+		bitc	immval, #6
+		testb	opcode, #3 wc
+		bitc	immval, #7
+		testb	opcode, #12 wc
+		bitc	immval, #5
+		mov	opdata, ldlongdata
+		mov	rs1, #x2
+		jmp	#hub_ldst_common
+
+c_sw
+		mov	opdata, swlongdata
+		jmp	#c_lwswcommon
+c_lw
+		mov	opdata, ldlongdata
+c_lwswcommon
+		mov	rd, opcode
+		shr	rd, #2
+		and	rd, #7
+		add	rd, #x8
+		mov	rs1, opcode
+		shr	rs1, #7
+		and	rs1, #7
+		add	rs1, #x8
+		
+		mov	immval, opcode
+		shr	immval, #10
+		and	immval, #7
+		shl	immval, #3
+		testb	opcode, #5 wc
+		bitc	immval, #6
+		testb	opcode, #6 wc
+		bitc	immval, #2
+		mov	func3, #2
+		jmp	#hub_ldst_common
+		
+c_slli
+		mov	rd, opcode
+		shr	rd, #7
+		and	rd, #$1f wz
+	if_z	jmp	#emit_nop
+		mov	immval, opcode
+		shr	immval, #2
+		and	immval, #$1f
+		mov	opdata, shldata
+		bith	opdata, #IMM_BITNUM
+		sets	opdata, immval
+		setd	opdata, rd
+		mov	jit_instrptr, #opdata
+		jmp	#emit1
+
+c_math
+		mov	rd, opcode
+		shr	rd, #7
+		mov	dest, rd	' selects actual function
+		and	rd, #7
+		add	rd, #x8
+		mov	rs1, rd
+		mov	opdata, sardata
+		and	dest, #$18 wz
+	if_z	mov	opdata, shrdata
+		cmp	dest, #$18 wz
+	if_z	jmp	#c_xtra
+		cmp	dest, #$10 wz
+	if_z	mov	opdata, anddata
+	
+		mov	immval, opcode
+		shr	immval, #2
+		and	immval, #$1f
+		testb	opcode, #12 wc
+		bitc	immval, #5
+		signx	immval, #5
+		bith	opdata, #IMM_BITNUM
+		jmp	#continue_imm
+
+c_xtra
+		mov	rs2, opcode
+		shr	rs2, #2
+		mov	dest, rs2
+		and	rs2, #7
+		add	rs2, #x8
+		mov	opdata, anddata	' assume choice 11
+		and	dest, #$18 wz
+	if_z	mov	opdata, subdata
+		cmp	dest, #$08 wz
+	if_z	mov	opdata, xordata
+		cmp	dest, #$10 wz
+	if_z	mov	opdata, ordata
+		setd	opdata, rd
+		sets	opdata, rs2
+		mov	jit_instrptr, #opdata
+		jmp	#emit1
+	
+		' the two branch instructions can share implementation,
+		' they just differ in condition code
+c_beqz
+c_bnez
+		testb	opcode, #13 wc
+	if_nc	mov	jit_condition, #$a  ' if_z
+	if_c	mov	jit_condition, #$5  ' if_nz
+		mov	opdata, cmpdata
+		mov	rs1, opcode
+		shr	rs1, #7
+		and	rs1, #7
+		add	rs1, #x8
+		mov	immval, #0
+		testb	opcode, #2 wc
+		bitc	immval, #5
+		testb	opcode, #3 wc
+		bitc	immval, #1
+		testb	opcode, #4 wc
+		bitc	immval, #2
+		testb	opcode, #5 wc
+		bitc	immval, #6
+		testb	opcode, #6 wc
+		bitc	immval, #7
+		testb	opcode, #10 wc
+		bitc	immval, #3
+		testb	opcode, #11 wc
+		bitc	immval, #4
+		testb	opcode, #12 wc
+		bitc	immval, #8
+		signx	immval, #8
+		
+		' emit compare
+		setd	opdata, rs1
+		sets	opdata, #x0
+		mov	jit_instrptr, #opdata
+		call	#emit1
+
+		' add in PC relative offset
+		add	immval, ptrb
+		sub	immval, #2
+		
+		mov	jit_branch_dest, immval
+		jmp	#jit_emit_direct_branch
 		
 		orgh	$4000
-		

@@ -116,10 +116,14 @@ def perfTest():
   print("Count: ", count)
 
 
-p2.binary:    47333
-p2emu.binary: 29760
-p2trace:     258000
+p2jit:           51200
+p2emu:           29760
+p2trace:        327000
+p2trace+rv32c:  335000
 ```
 
-The p2trace version has the widest variation in performance, since the
+The p2trace versions have the widest variation in performance, since the
 cache is less deterministic.
+
+When compiled for rv32c, we have about 20K left between bss end and
+the start of cache area (bss ends at roughly 6b000).

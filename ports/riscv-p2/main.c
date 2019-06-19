@@ -133,12 +133,21 @@ int main(int argc, char **argv) {
     gc_init(heap, heap + sizeof(heap));
     #endif
     mp_hal_io_init();
+
+    #if MICROPY_HW_ENABLE_SDCARD
+    sdcard_init();
+    #endif
+    #if MICROPY_HW_ENABLE_STORAGE
+    storage_init();
+    #endif
+
     mp_init();
+    mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_path), 0);
+    mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_)); // current dir (or base dir of the script)
 
     bool mounted_sdcard = false;
     #if MICROPY_HW_SDCARD_MOUNT_AT_BOOT
     // if an SD card is present then mount it on /sd/
-    sdcard_init();
     if (sdcard_is_present()) {
         sdcard_power_on();
         mounted_sdcard = init_sdcard_fs();
@@ -147,13 +156,13 @@ int main(int argc, char **argv) {
         printf("... detected sd card\n");
     }
     #endif
-#ifdef NEVER // for some reason this does not work    
+
     // set sys.path based on mounted filesystems (/sd is first so it can override /flash)
     if (mounted_sdcard) {
         mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_sd));
         mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_sd_slash_lib));
     }
-#endif
+
 #if MICROPY_ENABLE_COMPILER
     #if MICROPY_REPL_EVENT_DRIVEN
     pyexec_event_repl_init();

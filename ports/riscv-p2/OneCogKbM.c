@@ -7,7 +7,7 @@
 // Serial terminal: Tera Term, Parallax Serial Terminal (set the cterm_type
 // register to the appropriate TERM_* constant).
 // #region (Shared constants)
-#include "riscv.h"
+#include "propeller.h"
 #include "OneCogKbM.h"
 
 static  void OneCogKbM_mydirl_(int32_t pin);

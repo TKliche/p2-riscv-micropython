@@ -4,7 +4,7 @@
 #include "vgatext.h"
 #include "OneCogKbM.h"
 #include "BufferSerial.h"
-#include "riscv.h"
+#include "propeller.h"
 
 #define VGA_BASEPIN 48
 
@@ -70,12 +70,12 @@ int mp_hal_stdin_rx_chr(void) {
     do {
         ci = getrawbyte();
         if (ci < 0 && !flip) {
-            vgatext_invertcurchar(&vga);
+            vgatext_showcursor(&vga);
             flip = 1;
         }
     } while (ci < 0);
     if (flip) {
-        vgatext_invertcurchar(&vga);
+        vgatext_hidecursor(&vga);
     }
     c = ci;
 #endif

@@ -33,7 +33,7 @@
 #include "extmod/vfs_fat.h"
 
 #include "sdcard.h"
-#include "riscv.h"
+#include "propeller.h"
 
 #define drvl_(x) pinlow(x)
 #define drvh_(x) pinhigh(x)

@@ -1,4 +1,4 @@
-#include "riscv.h"
+#include "propeller.h"
 
 unsigned int _getclockfreq();
 void _waitcnt(unsigned int);

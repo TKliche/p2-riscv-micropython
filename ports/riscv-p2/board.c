@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "board.h"
-#include "riscv.h"
+#include "propeller.h"
 
 void pin_init(void) {
 }

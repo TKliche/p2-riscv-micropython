@@ -70,18 +70,25 @@ static void do_csr_write(unsigned int id, unsigned int val)
         break;
     case 0xbc1:
         csr_write(0xbc1, val);
+        break;
     case 0xbc2:
         csr_write(0xbc2, val);
+        break;
     case 0xbc3:
         csr_write(0xbc3, val);
+        break;
     case 0xbc4:
         csr_write(0xbc4, val);
+        break;
     case 0xbc5:
         csr_write(0xbc5, val);
+        break;
     case 0xbc6:
         csr_write(0xbc6, val);
+        break;
     case 0xbc7:
         csr_write(0xbc7, val);
+        break;
     default:
         break;
     }

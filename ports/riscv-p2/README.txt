@@ -93,11 +93,18 @@ c = pyb.Csr(0xbc1)
 c.write(c.read() + 16000000)
 ```
 
-### Hooks
+### CSR Hooks
 
 CSRs `0xbc0` through `0xbc7` are vectored through a jump table
-starting at HUB address `$800`. Each jump table entry contains two
-entries, first for reads and then for writes.
+starting at HUB address `$808`. Each jump table entry contains two
+entries, first for reads and then for writes. They should jump to
+the subroutine that implements the CSR, which should return via a
+regular P2 `ret` instruction.
+
+For reads, the value to be returned should be placed in the `pb`
+register.
+
+For writes, the value to be written is passed in the `pb` register.
 
 ## Timing
 
@@ -146,6 +153,30 @@ properly. You can also see if a card is found by checking
 you can manually mount it as described above.
 
 ## Other Notes
+
+### Debug Hooks
+
+As noted in the CSR section above, UART I/O and some other functions
+are performed by vectoring through a jump table at `$808`. The entries
+in this should be P2 jump instructions.
+
+There are also two hooks called at startup. The initial startup code
+jumps to `$800`, which is a jump instruction to the main startup code.
+
+After the RISC-V emulator has been set up, a call instruction is made
+to `804`. The default setup just has a `jmp` to the boot message
+printer, but if this is changed to an absolute `jmp` to a subroutine
+ending with a `ret`, arbitrary P2 code may be executed at
+initialization time.
+
+### Memory map
+
+```
+$00000 - $03FFF: RISC-V emulation code
+$04000 - $6FFFF: python space
+$70000 - $7BFFF: cache space
+$7C000 - $7FFFF: debug space
+```
 
 ### Performance
 

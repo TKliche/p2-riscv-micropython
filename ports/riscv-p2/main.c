@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "propeller.h"
 
 #include "py/compile.h"
 #include "py/runtime.h"
@@ -13,7 +14,7 @@
 #include "extmod/vfs_fat.h"
 #include "sdcard.h"
 
-#define USER_MEMORY 196*1024
+#define USER_MEMORY 200*1024
 //#define USER_MEMORY 128*1024
 
 #if MICROPY_ENABLE_COMPILER
@@ -44,6 +45,25 @@ extern void mp_hal_stdout_tx_strn(const char *, size_t);
 void debug_msg(const char *s)
 {
     mp_hal_stdout_tx_strn(s, strlen(s));
+}
+
+// not really red and green, just two distinct LEDs
+#define PYB_LED_RED 57
+#define PYB_LED_GREEN 56
+#define led_state(x, v) setpin(x, v)
+#define delay_ms(n) waitcnt(getcnt() + (n) * 160000)
+
+void flash_error(int n) {
+    for (int i = 0; i < n; i++) {
+        led_state(PYB_LED_RED, 1);
+        led_state(PYB_LED_GREEN, 0);
+        delay_ms(250);
+        led_state(PYB_LED_RED, 0);
+        led_state(PYB_LED_GREEN, 1);
+        delay_ms(250);
+    }
+    led_state(PYB_LED_GREEN, 0);
+    delay_ms(250);
 }
 
 #if MICROPY_HW_SDCARD_MOUNT_AT_BOOT
@@ -159,27 +179,23 @@ int main(int argc, char **argv) {
 
     // set sys.path based on mounted filesystems (/sd is first so it can override /flash)
     if (mounted_sdcard) {
+        const char *main_py;
         mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_sd));
         mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_sd_slash_lib));
+        main_py = "main.py";
+        int ret = pyexec_file_if_exists(main_py);
+        if (!ret) {
+            flash_error(3);
+        }
     }
 
 #if MICROPY_ENABLE_COMPILER
-    #if MICROPY_REPL_EVENT_DRIVEN
-    pyexec_event_repl_init();
-    for (;;) {
-        int c = mp_hal_stdin_rx_chr();
-        if (pyexec_event_repl_process_char(c)) {
-            break;
-        }
-    }
-    #else
     pyexec_friendly_repl();
-    #endif
     //do_str("print('hello world!', list(x+1 for x in range(10)), end='eol\\n')", MP_PARSE_SINGLE_INPUT);
     //do_str("for i in range(10):\r\n  print(i)", MP_PARSE_FILE_INPUT);
-    #else
+#else
     pyexec_frozen_module("frozentest.py");
-    #endif
+#endif
     mp_deinit();
     return 0;
 }

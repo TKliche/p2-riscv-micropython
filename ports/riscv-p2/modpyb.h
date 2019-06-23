@@ -27,6 +27,7 @@
 #define MICROPY_INCLUDED_UPDUINO_MODPYB_H
 
 extern const mp_obj_type_t pyb_pin_type;
+extern const mp_obj_type_t pyb_csr_type;
 extern const mp_obj_module_t pyb_module;
 
 #endif // MICROPY_INCLUDED_UPDUINO_MODPYB_H

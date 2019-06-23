@@ -1,4 +1,13 @@
-# Overview
+# MicroPython for P2
+
+## What's new
+
+This version has been compiled with code compression, so it has more room
+available for user programs (approx. 200K). It also automatically runs
+the file `main.py` from an inserted SD card at boot time, if one is
+found.
+
+## Overview
 
 This is a basic port of MicroPython to the Parallax P2 Eval board.
 
@@ -55,6 +64,41 @@ p.xval(-1)
 hex(p.readzval())
 '0xffffffff'
 ```
+## CSRs
+
+There are a number of special registers ("control and status
+registers") which may be hooked in to by assembly code or
+debuggers to provide special features. These are labelled by a
+12 bit number. Only a few are presently implemented.
+They may be accessed by the `Csr` type within the `pyb` module.
+Supported CSRs include:
+```
+0xbc0: UART register; read gets character, write sends character
+0xbc1: waitcycle register: read gets current processor cycle, write
+       waits until that cycle comes around again
+0xbc2: reserved for debugging
+0xbc3: millisecond register: read gets elapsed milliseconds
+0xbc4-0xbc7: available for hooks
+0xc00: 64 bit cycle counter (low 64 bits)
+0xc80: 64 bit cycles counter (high 64 bits)
+```
+
+The methods available for CSRs are `read()`, `write(val)`, and `id()`.
+
+### Example:
+
+A delay of 16000000 cycles may be implemented with:
+```
+c = pyb.Csr(0xbc1)
+c.write(c.read() + 16000000)
+```
+
+### Hooks
+
+CSRs `0xbc0` through `0xbc7` are vectored through a jump table
+starting at HUB address `$800`. Each jump table entry contains two
+entries, first for reads and then for writes.
+
 ## Timing
 
 pyb also has millis() and micros() methods to return current
@@ -114,16 +158,8 @@ def perfTest():
   while millis() < endTime:
     count += 1
   print("Count: ", count)
-
-
-p2jit:           51200
-p2emu:           29760
-p2trace:        327000
-p2trace+rv32c:  335000
 ```
 
-The p2trace versions have the widest variation in performance, since the
-cache is less deterministic.
+We're getting about 340K on this, which isn't great but we haven't
+really optimized yet.
 
-When compiled for rv32c, we have about 20K left between bss end and
-the start of cache area (bss ends at roughly 6b000).

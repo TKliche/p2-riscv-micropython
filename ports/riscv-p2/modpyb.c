@@ -134,6 +134,7 @@ STATIC const mp_rom_map_elem_t pyb_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_pyb) },
 
     { MP_ROM_QSTR(MP_QSTR_Pin), MP_ROM_PTR(&pyb_pin_type) },
+    { MP_ROM_QSTR(MP_QSTR_Csr), MP_ROM_PTR(&pyb_csr_type) },
     { MP_ROM_QSTR(MP_QSTR_stop), MP_ROM_PTR(&pyb_stop_obj) },
 
     { MP_ROM_QSTR(MP_QSTR_millis), MP_ROM_PTR(&pyb_millis_obj) },

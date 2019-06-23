@@ -59,6 +59,7 @@ SRC_C = \
 	main.c \
 	uart_core.c \
 	modpyb.c \
+	modpybcsr.c \
 	modpybpin.c \
 	moduos.c \
 	board.c \

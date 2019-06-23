@@ -106,6 +106,9 @@ register.
 
 For writes, the value to be written is passed in the `pb` register.
 
+In all cases registers `pb` and `ptrb` may be modified by the
+subroutine. All other COG registers should be left alone.
+
 ## Timing
 
 pyb also has millis() and micros() methods to return current
@@ -158,7 +161,10 @@ you can manually mount it as described above.
 
 As noted in the CSR section above, UART I/O and some other functions
 are performed by vectoring through a jump table at `$808`. The entries
-in this should be P2 jump instructions.
+in this should be P2 jump instructions. CSR writes expect values in
+`pb`; CSR reads return values in `pb`. Registers `pb` and `ptrb` are
+available for use in the subroutines; all other COG memory should be
+preserved.
 
 There are also two hooks called at startup. The initial startup code
 jumps to `$800`, which is a jump instruction to the main startup code.

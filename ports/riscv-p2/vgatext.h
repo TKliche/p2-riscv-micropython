@@ -14,7 +14,7 @@
 #define VGATEXT_ROWS (36)
 #define VGATEXT_FONT_HEIGHT (16)
 // bytes per character: use 4 for 8bpp colors, 8 for 24bpp colors
-#define VGATEXT_CELL_SIZE (8)
+#define VGATEXT_CELL_SIZE (4)
 #define VGATEXT_STATE_NORMAL (0)
 #define VGATEXT_STATE_ESCAPE (1)
 #define VGATEXT_STATE_CSI (2)

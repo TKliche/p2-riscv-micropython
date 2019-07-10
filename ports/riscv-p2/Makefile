@@ -1,5 +1,15 @@
 include ../../py/mkenv.mk
 
+# Using standard RISC-V toolchain
+#RV32_BASE = /opt/riscv/riscv32-unknown-elf/
+#RV32_GCCLIB=/opt/riscv/lib/gcc/riscv32-unknown-elf/8.2.0/libgcc.a
+#RV32_PREFIX=riscv32-unknown-elf-
+
+# Using GNU MCU toolchain
+RV32_BASE = /opt/riscv/riscv-none-embed
+RV32_GCCLIB=/opt/riscv/lib/gcc/riscv-none-embed/8.2.0/rv32imac/ilp32/libgcc.a
+RV32_PREFIX=riscv-none-embed-
+
 LDFILE ?= riscv_p2.ld
 
 FASTSPIN = /home/ersmith/Parallax/spin2cpp/build/fastspin
@@ -8,8 +18,7 @@ P2EMUHEADER = p2emuheader.bin
 P2TRACEHEADER = p2traceheader.bin
 CROSS = 1
 
-RV32_MATHLIB=/opt/riscv/riscv32-unknown-elf/lib/libm.a
-RV32_GCCLIB=/opt/riscv/lib/gcc/riscv32-unknown-elf/8.2.0/libgcc.a
+RV32_MATHLIB=$(RV32_BASE)/lib/libm.a
 
 HEADERSIZE=16384
 RV32ARCH=rv32imc
@@ -21,7 +30,7 @@ QSTR_DEFS = qstrdefsport.h
 include $(TOP)/py/py.mk
 
 ifeq ($(CROSS), 1)
-CROSS_COMPILE = riscv32-unknown-elf-
+CROSS_COMPILE = $(RV32_PREFIX)
 endif
 
 INC += -I.
@@ -68,20 +77,16 @@ SRC_C = \
 	vga_tile_driver.c \
 	OneCogKbM.c \
 	BufferSerial.c \
-	lib/utils/printf.c \
-	lib/utils/stdout_helpers.c \
 	lib/utils/pyexec.c \
+	lib/utils/stdout_helpers.c \
+	lib/utils/sys_stdio_mphal.c \
 	lib/libc/string0.c \
 	lib/mp-readline/readline.c \
 	lib/oofatfs/ff.c \
+	lib/oofatfs/ffunicode.c \
 	lib/timeutils/timeutils.c \
-	extmod/vfs.c \
-	extmod/vfs_fat.c \
-	extmod/vfs_fat_diskio.c \
-	extmod/vfs_fat_file.c \
-	extmod/vfs_reader.c \
 
-OBJ = $(CRT0) $(PY_CORE_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
+OBJ = $(CRT0) $(PY_CORE_O) $(PY_EXTMOD_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
 
 ifeq ($(CROSS), 1)
 #all: $(BUILD)/p2.binary $(BUILD)/p2emu.binary $(BUILD)/p2trace.binary

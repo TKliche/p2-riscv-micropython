@@ -144,10 +144,13 @@ STATIC bool init_sdcard_fs(void) {
 }
 #endif
 
+
 int main(int argc, char **argv) {
     int stack_dummy;
     stack_top = (char*)&stack_dummy;
     extern void mp_hal_io_init(void);
+
+    debug_msg("hello\r\n");
     
     #if MICROPY_ENABLE_GC
     gc_init(heap, heap + sizeof(heap));

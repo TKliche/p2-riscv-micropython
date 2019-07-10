@@ -31,21 +31,16 @@ static char *stack_top;
 static char heap[2048];
 #endif
 
-extern int write(int, char *, int);
-
 int main(int argc, char **argv) {
     int stack_dummy;
     stack_top = (char*)&stack_dummy;
-    
+
     #if MICROPY_ENABLE_GC
     gc_init(heap, heap + sizeof(heap));
     #endif
     mp_init();
-    write(1, "hello 1\n", 8);    
-    
     #if MICROPY_ENABLE_COMPILER
     #if MICROPY_REPL_EVENT_DRIVEN
-    write(1, "hello 2\n", 8);
     pyexec_event_repl_init();
     for (;;) {
         int c = mp_hal_stdin_rx_chr();
@@ -54,13 +49,11 @@ int main(int argc, char **argv) {
         }
     }
     #else
-    write(1, "hello 3\n", 8);
     pyexec_friendly_repl();
     #endif
     //do_str("print('hello world!', list(x+1 for x in range(10)), end='eol\\n')", MP_PARSE_SINGLE_INPUT);
     //do_str("for i in range(10):\r\n  print(i)", MP_PARSE_FILE_INPUT);
     #else
-    write(1, "hello 4\n", 8);
     pyexec_frozen_module("frozentest.py");
     #endif
     mp_deinit();

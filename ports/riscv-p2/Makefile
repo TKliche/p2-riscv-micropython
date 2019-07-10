@@ -10,7 +10,7 @@ RV32_BASE = /opt/riscv/riscv-none-embed
 RV32_GCCLIB=/opt/riscv/lib/gcc/riscv-none-embed/8.2.0/rv32imac/ilp32/libgcc.a
 RV32_PREFIX=riscv-none-embed-
 
-LDFILE ?= riscv_p2.ld
+LDFILE ?= riscv_p2_local.ld
 
 FASTSPIN = /home/ersmith/Parallax/spin2cpp/build/fastspin
 P2HEADER = p2jitheader.bin

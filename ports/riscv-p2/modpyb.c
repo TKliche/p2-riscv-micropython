@@ -33,9 +33,7 @@
 #include "modpyb.h"
 #include "sdcard.h"
 
-extern unsigned int _getcnt();
-extern void _waitcnt(unsigned int x);
-extern unsigned int _getclockfreq();
+#include <propeller2.h>
 
 /// \module pyb - functions related to the pyboard
 ///
@@ -119,7 +117,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_delay_obj, pyb_delay);
 /// Delay for the given number of microseconds.
 STATIC mp_obj_t pyb_udelay(mp_obj_t usec_in) {
     mp_int_t usec = mp_obj_get_int(usec_in);
-    _waitcnt(_getcnt() + usec * (_getclockfreq()/1000000));
+    _waitcnt(_cnt() + usec * (_clockfreq()/1000000));
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_udelay_obj, pyb_udelay);

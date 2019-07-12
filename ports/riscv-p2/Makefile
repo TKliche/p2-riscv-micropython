@@ -10,12 +10,9 @@ RV32_BASE = /opt/riscv/riscv-none-embed
 RV32_GCCLIB=/opt/riscv/lib/gcc/riscv-none-embed/8.2.0/rv32imac/ilp32/libgcc.a
 RV32_PREFIX=riscv-none-embed-
 
-LDFILE ?= riscv_p2_local.ld
+#LDFILE ?= riscv_p2_local.ld
+LDFILE=riscvp2.ld
 
-FASTSPIN = /home/ersmith/Parallax/spin2cpp/build/fastspin
-P2HEADER = p2jitheader.bin
-P2EMUHEADER = p2emuheader.bin
-P2TRACEHEADER = p2traceheader.bin
 CROSS = 1
 
 RV32_MATHLIB=$(RV32_BASE)/lib/libm.a
@@ -38,13 +35,12 @@ INC += -I$(TOP)
 INC += -I$(BUILD)
 
 ifeq ($(CROSS), 1)
-DFU = $(TOP)/tools/dfu.py
-PYDFU = $(TOP)/tools/pydfu.py
+LD=$(CC)
 CFLAGS_RISCV = -march=$(RV32ARCH)
-CFLAGS = $(INC) -Wall -Werror -std=c99 -nostdlib $(CFLAGS_RISCV) $(COPT) $(CFLAGS_MOD)
-#LDFLAGS = -nostdlib -T $(LDFILE) -Map=$@.map --cref --gc-sections
-LDFLAGS = -nostdlib -T $(LDFILE) -Map=$@.map --cref 
-CRT0 = $(BUILD)/crt0.o $(BUILD)/setjmp.o
+CFLAGS = $(INC) -Wall -Werror -std=c99 $(CFLAGS_RISCV) $(COPT) $(CFLAGS_MOD)
+#LDFLAGS = -nostdlib -T $(LDFILE) -Wl,-Map=$@.map,--cref,--gc-sections
+LDFLAGS = -specs=nano.specs -T $(LDFILE) -Wl,-Map=$@.map,--cref 
+#CRT0 = $(BUILD)/crt0.o $(BUILD)/setjmp.o
 
 $(BUILD)/%.o: %.S
 	$(CC) $(CFLAGS) -o $@ -c $^
@@ -89,8 +85,7 @@ SRC_C = \
 OBJ = $(CRT0) $(PY_CORE_O) $(PY_EXTMOD_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
 
 ifeq ($(CROSS), 1)
-#all: $(BUILD)/p2.binary $(BUILD)/p2emu.binary $(BUILD)/p2trace.binary
-all: $(BUILD)/p2trace.binary
+all: $(BUILD)/firmware.bin
 else
 all: $(BUILD)/firmware.elf
 endif
@@ -102,31 +97,6 @@ $(BUILD)/firmware.elf: $(OBJ)
 
 $(BUILD)/firmware.bin: $(BUILD)/firmware.elf
 	$(Q)$(OBJCOPY) -O binary $^ $(BUILD)/firmware.bin
-## Use next line to padd to a known size
-##	dd if=/dev/null of=$(BUILD)/firmware.bin bs=1 count=0 seek=262144
-
-$(BUILD)/p2.binary: $(BUILD)/$(P2HEADER) $(BUILD)/firmware.bin
-	cat $^ > $@
-$(BUILD)/p2emu.binary: $(BUILD)/$(P2EMUHEADER) $(BUILD)/firmware.bin
-	cat $^ > $@
-$(BUILD)/p2trace.binary: $(BUILD)/$(P2TRACEHEADER) $(BUILD)/firmware.bin
-	cat $^ > $@
-
-$(BUILD)/p2jitheader.bin: riscvjit_p2.spin
-	mkdir -p $(BUILD)
-	$(FASTSPIN) -2 -c -o $(BUILD)/p2jitheader.bin riscvjit_p2.spin
-	dd if=/dev/null of=$(BUILD)/p2jitheader.bin bs=1 count=1 seek=$(HEADERSIZE)
-
-$(BUILD)/p2traceheader.bin: riscvtrace_p2.spin jit/jit_engine.spinh jit/util_serial.spin2
-	mkdir -p $(BUILD)
-	$(FASTSPIN) -2 -c -o $(BUILD)/p2traceheader.bin riscvtrace_p2.spin
-	dd if=/dev/null of=$(BUILD)/p2traceheader.bin bs=1 count=1 seek=$(HEADERSIZE)
-
-$(BUILD)/p2emuheader.bin: debug.spin riscvemu_p2.spin
-	mkdir -p $(BUILD)
-	$(FASTSPIN) -2 -o $(BUILD)/p2emuheader.bin debug.spin
-	dd if=/dev/null of=$(BUILD)/p2emuheader.bin bs=1 count=1 seek=$(HEADERSIZE)
-
 # Run emulation build on a POSIX system with suitable terminal settings
 run:
 	stty raw opost -echo

@@ -1,5 +1,6 @@
 	.text
-start:
+	.globl _start
+_start:
 	//mv	a0, x0
 	//call	_debug_chksum
 	// perform whatever setup we need
@@ -35,8 +36,8 @@ start:
 	mv	x31, x0
 
 	// zero the bss and heap
-	la	t0, _bssstart
-	la	t1, _bssend
+	la	t0, __bss_start
+	la	t1, __BSS_END__
 	beq	t0,t1,.endlp
 .lp:
 	sw	x0,0(t0)

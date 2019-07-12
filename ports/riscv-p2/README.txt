@@ -2,6 +2,10 @@
 
 ## What's new
 
+Most of the changes are internal, involving the use of a new compiler
+framework. There are also some fixes to the VGA and a few more
+built-in modules.
+
 This version has been compiled with code compression, so it has more room
 available for user programs (approx. 200K). It also automatically runs
 the file `main.py` from an inserted SD card at boot time, if one is

@@ -4,7 +4,7 @@
 #include "vgatext.h"
 #include "OneCogKbM.h"
 #include "BufferSerial.h"
-#include "propeller.h"
+#include <propeller2.h>
 
 #define VGA_BASEPIN 48
 
@@ -12,10 +12,8 @@
  * Core UART functions to implement for a port
  */
 
-extern int _getbyte();
-extern int _putbyte(int c);
-extern unsigned int _getcnt();
-extern void _waitcnt(unsigned int n);
+extern int p2_getbyte();
+extern void p2_putbyte(int c);
 
 vgatext vga;
 OneCogKbM usb1;
@@ -109,8 +107,9 @@ static int getrawbyte() {
 
 void _pausems(unsigned numms)
 {
-    unsigned cycle = _getcnt() + numms * 160000;
-    _waitcnt(cycle);
+    unsigned cycles_per_millis = _clockfreq() / 1000;
+    unsigned cycles = numms * cycles_per_millis;
+    _waitx(cycles);
 }
 
 // Send string of given length
@@ -126,13 +125,31 @@ void mp_hal_stdout_tx_strn(const char *str, mp_uint_t len) {
         c = (*str++) & 0xff;
 #if 0        
         if (c < 0x20) {
-            _putbyte('^');
+            p2_putbyte('^');
             c += '@';
         }
 #endif        
-        _putbyte(c);
+        p2_putbyte(c);
         vgatext_tx(&vga, c);
     }
 //    _pausems(500);
 #endif
+}
+
+void
+p2_putbyte(int c)
+{
+    _csr_write(_UART_CSR, c);
+}
+
+uint64_t
+p2_getcntll()
+{
+    uint32_t hi1, lo, hi2;
+    do {
+        hi1 = _cnth();
+        lo = _cnt();
+        hi2 = _cnth();
+    } while (hi1 != hi2);
+    return lo | (((uint64_t)hi1) << 32LL);
 }

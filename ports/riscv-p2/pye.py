@@ -269,7 +269,7 @@ class Editor:
 #        return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
 
     def get_screen_size(self):
-        return [36, 100]
+        return [40, 100]
     
     def redraw(self, flag):
         self.cursor(False)

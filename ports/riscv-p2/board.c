@@ -1,51 +1,51 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <propeller2.h>
 #include "board.h"
-#include "propeller.h"
 
 void pin_init(void) {
 }
 
 void pin_state(int pin, unsigned state) {
-    setpin(pin, state);
+    _pinw(pin, state);
 }
 
 void pin_toggle(int pin)
 {
-    togglepin(pin);
+    _pinnot(pin);
 }
 
 void pin_setdir(int pin, unsigned direction)
 {
     if (direction) {
-        dirh_(pin);
+        _dirh(pin);
     } else {
-        dirl_(pin);
+        _dirl(pin);
     }
 }
 
 void pin_setxval(int pin, unsigned xval)
 {
-    pinwx(pin, xval);
+    _wxpin(pin, xval);
 }
 
 void pin_setyval(int pin, unsigned yval)
 {
-    pinwy(pin, yval);
+    _wypin(pin, yval);
 }
 
 void pin_setmode(int pin, unsigned mode)
 {
-    pinwr(pin, mode);
+    _wrpin(pin, mode);
 }
 
 unsigned pin_getzval(int pin)
 {
-    return pinrdr(pin);
+    return _rdpin(pin);
 }
 
 unsigned pin_read(int pin)
 {
-    return getpin(pin);
+    return _pin(pin);
 }

@@ -27,11 +27,11 @@
 #include "py/runtime.h"
 #include "board.h"
 #include "modpyb.h"
-#include "propeller.h"
+#include <propeller2.h>
 
 //////////////////////////////////////////////////////
 // helper functions
-// we need these because csr_read() and csr_write() only
+// we need these because _csr_read() and csr_write() only
 // work with immediate values (the instructions only
 // have an immediate field)
 //////////////////////////////////////////////////////
@@ -39,25 +39,25 @@ static unsigned int do_csr_read(unsigned id)
 {
     switch (id) {
     case 0xbc0:
-        return csr_read(0xbc0);
+        return _csr_read(0xbc0);
     case 0xbc1:
-        return csr_read(0xbc1);
+        return _csr_read(0xbc1);
     case 0xbc2:
-        return csr_read(0xbc2);
+        return _csr_read(0xbc2);
     case 0xbc3:
-        return csr_read(0xbc3);
+        return _csr_read(0xbc3);
     case 0xbc4:
-        return csr_read(0xbc4);
+        return _csr_read(0xbc4);
     case 0xbc5:
-        return csr_read(0xbc5);
+        return _csr_read(0xbc5);
     case 0xbc6:
-        return csr_read(0xbc6);
+        return _csr_read(0xbc6);
     case 0xbc7:
-        return csr_read(0xbc7);
-    case CNT_CSR:
-        return csr_read(CNT_CSR);
-    case CNTH_CSR:
-        return csr_read(CNTH_CSR);
+        return _csr_read(0xbc7);
+    case _CNT_CSR:
+        return _csr_read(_CNT_CSR);
+    case _CNTH_CSR:
+        return _csr_read(_CNTH_CSR);
     default:
         return (unsigned)-1;
     }
@@ -66,28 +66,28 @@ static void do_csr_write(unsigned int id, unsigned int val)
 {
     switch (id) {
     case 0xbc0:
-        csr_write(0xbc0, val);
+        _csr_write(0xbc0, val);
         break;
     case 0xbc1:
-        csr_write(0xbc1, val);
+        _csr_write(0xbc1, val);
         break;
     case 0xbc2:
-        csr_write(0xbc2, val);
+        _csr_write(0xbc2, val);
         break;
     case 0xbc3:
-        csr_write(0xbc3, val);
+        _csr_write(0xbc3, val);
         break;
     case 0xbc4:
-        csr_write(0xbc4, val);
+        _csr_write(0xbc4, val);
         break;
     case 0xbc5:
-        csr_write(0xbc5, val);
+        _csr_write(0xbc5, val);
         break;
     case 0xbc6:
-        csr_write(0xbc6, val);
+        _csr_write(0xbc6, val);
         break;
     case 0xbc7:
-        csr_write(0xbc7, val);
+        _csr_write(0xbc7, val);
         break;
     default:
         break;

@@ -466,17 +466,17 @@ void OneCogKbM_start(OneCogKbM *self, int32_t status)
 //    byte[status][3] := 0                                ' Client must set <> 0 at mouse "ready" event, zero at disconnect event
 static void OneCogKbM_mydirl_(int32_t pin)
 {
- dirl_(pin); 
+ _dirl(pin); 
 }
 
 static void OneCogKbM_mydirh_(int32_t pin)
 {
- dirh_(pin); 
+ _dirh(pin); 
 }
 
 static void OneCogKbM_mywrpin_(int32_t mode, int32_t pin)
 {
- pinwr(pin, mode); 
+ _wrpin(pin, mode); 
 }
 
 int32_t OneCogKbM_mouse(OneCogKbM *self)

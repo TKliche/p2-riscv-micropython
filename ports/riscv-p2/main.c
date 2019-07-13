@@ -150,8 +150,6 @@ int main(int argc, char **argv) {
     stack_top = (char*)&stack_dummy;
     extern void mp_hal_io_init(void);
 
-    debug_msg("hello\r\n");
-    
     #if MICROPY_ENABLE_GC
     gc_init(heap, heap + sizeof(heap));
     #endif
@@ -175,9 +173,9 @@ int main(int argc, char **argv) {
         sdcard_power_on();
         mounted_sdcard = init_sdcard_fs();
     }
-    if (mounted_sdcard) {
-        printf("... detected sd card\n");
-    }
+    //if (mounted_sdcard) {
+    //    printf("... detected sd card\n");
+    //}
     #endif
 
     // set sys.path based on mounted filesystems (/sd is first so it can override /flash)

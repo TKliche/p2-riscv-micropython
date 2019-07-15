@@ -959,25 +959,3 @@ def pye(*content, tab_size=4, undo=50, device=0):
 ## close
     return slot[0].content if (slot[0].fname == "") else slot[0].fname
 
-#ifdef LINUX
-if __name__ == "__main__":
-    if is_linux:
-        import stat
-        fd_tty = 0
-        if len(sys.argv) > 1:
-            name = sys.argv[1:]
-            pye(*name, undo=500, device=fd_tty)
-        else:
-            name = "."
-            if not is_micropython:
-                mode = os.fstat(0).st_mode
-                if stat.S_ISFIFO(mode) or stat.S_ISREG(mode):
-                    name = sys.stdin.readlines()
-                    os.close(0) ## close and repopen /dev/tty
-                    fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
-                    for i, l in enumerate(name):  ## strip and convert
-                        name[i], tc = expandtabs(l.rstrip('\r\n\t '))
-            pye(name, undo=500, device=fd_tty)
-    else:
-        print ("\nSorry, this OS is not supported (yet)")
-#endif

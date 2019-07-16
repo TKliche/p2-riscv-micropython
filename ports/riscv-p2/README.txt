@@ -19,9 +19,6 @@ https://github.com/robert-hh/Micropython-Editor). To use it do:
 ```
 Full documents are at the github page.
 
-This isn't really working very well yet with the USB keyboard, mainly
-due to key mapping issues. Hopefully we can resolve that soon.
-
 ## Overview
 
 This is a basic port of MicroPython to the Parallax P2 Eval board.

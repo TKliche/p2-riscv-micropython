@@ -50,11 +50,13 @@ CFLAGS = -m32 -g $(INC) -Wall -Werror -std=c99 $(COPT)
 LDFLAGS = -m32 -g -Wl,-Map=$@.map,--cref -Wl,--gc-sections
 endif
 
+OPT ?= -Os
+
 # Tune for Debugging or Optimization
 ifeq ($(DEBUG), 1)
 CFLAGS += -O0 -ggdb
 else
-CFLAGS += -Os -DNDEBUG
+CFLAGS += $(OPT) -DNDEBUG
 CFLAGS += -fdata-sections -ffunction-sections
 endif
 

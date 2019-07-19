@@ -17,8 +17,7 @@ static inline mp_uint_t mp_hal_ticks_us(void) {
     return (uint32_t)(now / freq);
 }
 static inline void mp_hal_delay_ms(mp_uint_t ms) {
-    unsigned int freq = _clockfreq();
-    unsigned int delay = ms * (freq / 1000);
-    _waitx(delay);
+    extern void _pausems(unsigned numms);
+    _pausems(ms);
 }
 static inline void mp_hal_set_interrupt_char(char c) {}

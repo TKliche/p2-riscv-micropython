@@ -21,9 +21,13 @@ BufferSerial ser1;
 static volatile uint8_t usb1_status[4];
 static int32_t usb1_eventa;
 
+unsigned int p2_cycles_per_millis;
+
 void mp_hal_io_init(void) {
     int cog;
     usb1_status[0] = usb1_status[1] = usb1_status[2] = usb1_status[3] = 0;
+    
+    p2_cycles_per_millis = _clockfreq() / 1000;
     vgatext_start(&vga, VGA_BASEPIN);
     OneCogKbM_start(&usb1, (int32_t)&usb1_status);
     cog = usb1_status[0] - 1;
@@ -157,8 +161,7 @@ static int getrawbyte() {
 
 void _pausems(unsigned numms)
 {
-    unsigned cycles_per_millis = _clockfreq() / 1000;
-    unsigned cycles = numms * cycles_per_millis;
+    unsigned cycles = numms * p2_cycles_per_millis;
     _waitx(cycles);
 }
 

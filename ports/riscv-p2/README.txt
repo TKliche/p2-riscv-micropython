@@ -209,6 +209,5 @@ def perfTest():
   print("Count: ", count)
 ```
 
-We're getting about 340K on this, which isn't great but we haven't
-really optimized yet.
-
+We're getting about 360K on this, on a build optimized for size
+rather than speed.

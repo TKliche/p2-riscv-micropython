@@ -14,8 +14,11 @@
 #include "extmod/vfs_fat.h"
 #include "sdcard.h"
 
+#ifdef OPT_SIZE
 #define USER_MEMORY 236*1024
-//#define USER_MEMORY 200*1024
+#else
+#define USER_MEMORY 230*1024
+#endif
 //#define USER_MEMORY 128*1024
 
 #if MICROPY_ENABLE_COMPILER

@@ -36,8 +36,7 @@ INC += -I$(BUILD)
 
 ifeq ($(CROSS), 1)
 LD=$(CC)
-CFLAGS_RISCV = -march=$(RV32ARCH) -msave-restore
-#CFLAGS_RISCV = -march=$(RV32ARCH)
+CFLAGS_RISCV = -march=$(RV32ARCH)
 CFLAGS = $(INC) -Wall -std=c99 $(CFLAGS_RISCV) $(COPT) $(CFLAGS_MOD)
 #LDFLAGS = -nostdlib -T $(LDFILE) -Wl,-Map=$@.map,--cref,--gc-sections
 LDFLAGS = -specs=nano.specs -T $(LDFILE) -Wl,-Map=$@.map,--cref,--gc-sections
@@ -51,6 +50,7 @@ CFLAGS = -m32 -g $(INC) -Wall -Werror -std=c99 $(COPT)
 LDFLAGS = -m32 -g -Wl,-Map=$@.map,--cref -Wl,--gc-sections
 endif
 
+#OPT ?= -Os -DOPT_SIZE -msave-restore
 OPT ?= -Os
 
 # Tune for Debugging or Optimization

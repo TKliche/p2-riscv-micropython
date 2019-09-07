@@ -15,7 +15,7 @@ LDFILE=riscvp2.ld
 
 CROSS = 1
 
-RV32_MATHLIB=$(RV32_BASE)/lib/libm.a
+RV32_MATHLIB=-Wl,-Tfastmath.ld $(RV32_BASE)/lib/libm.a
 
 HEADERSIZE=16384
 RV32ARCH=rv32imc

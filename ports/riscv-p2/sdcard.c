@@ -219,7 +219,7 @@ bool sdcard_is_present(void) {
     if (pyb_sdmmc_flags & PYB_SDMMC_FLAG_ACTIVE) {
         return true;
     }
-    i = _pin(PIN_SD_TEST1);
+    i = _pinr(PIN_SD_TEST1);
     if (i == 0) return 1;
 
     // check for a pull-up on pin 60
@@ -227,7 +227,7 @@ bool sdcard_is_present(void) {
     _waitx(200); // wait > 1us
     _pinf(PIN_SD_TEST2); // does a fltl
     _waitx(1000); // wait > 5 us
-    i = _pin(PIN_SD_TEST2);
+    i = _pinr(PIN_SD_TEST2);
     return i;
 }
 

@@ -47,5 +47,5 @@ unsigned pin_getzval(int pin)
 
 unsigned pin_read(int pin)
 {
-    return _pin(pin);
+    return _pinr(pin);
 }

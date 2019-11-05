@@ -442,8 +442,20 @@ VAR
   long dataVals[32]                                   ' Contiguous cog/lut register/cell values
 ' Parameter block end
 
+  long hw_rev
+  
 ''
 PUB start(status)
+  ' if v2 silicon, adjust some constants accordingly
+  if hw_rev == 0
+    hw_rev := check_hw_rev
+    if hw_rev == 2
+      ' new silicon
+      long[@usb_rpin_ls_val] := USB_V2MODE
+      long[@usb_xpin_ls_val] := USB_H_LS_NCO
+      long[@usb_rpin_fs_val] := USB_V2MODE
+      long[@usb_xpin_fs_val] := USB_H_FS_NCO
+      
   usbcog := cognew(@usb_host_start, @itemAddr) + 1
 
   if usbcog  
@@ -454,7 +466,11 @@ PUB start(status)
     byte[status][1] := USB_EVENT_REPO                   ' Long repository smart pin to poll for event notifications
 '    byte[status][2] := 0                                ' Client must set <> 0 at kbd "ready" event, zero at disconnect event
 '    byte[status][3] := 0                                ' Client must set <> 0 at mouse "ready" event, zero at disconnect event
-
+  return usbcog
+  
+PUB getdat
+  return @usb_host_start
+  
 PRI mydirl_(pin)
 #ifdef __SPIN2CPP__
   {++ dirl_(pin); }
@@ -500,6 +516,31 @@ PUB getDebugInfo
   return itemAddr, dataVals
 ' #endregion (Spin VAR and functions)
 ' #region (USB host cog)
+
+PRI check_hw_rev | tmp
+  tmp := 0
+  cognew(@hwcheck, @tmp)
+  repeat while tmp == 0
+  return tmp
+  
+DAT
+	org	0
+	' code used to check hardware revision
+	' in rev A (the original silicon) setq + rdlong pa, ptrb++ 
+	'  increments ptrb only once
+	' in rev B (revised silicon) it will increment ptrb appropriately
+        '
+hwcheck
+	mov	pb, ptrb
+	setq	#1
+	rdlong	$1e0, ptrb++
+	subr	pb, ptrb
+	shr	pb, #2 wz
+  if_z	mov	pb, #1
+  	wrlong	pb, ptra
+	cogid	pa
+	cogstop	pa
+	
 DAT
                 org 0
 ' /* usb_host_start
@@ -520,8 +561,8 @@ usb_host_start
                 cmp     htmp, ##168_000_000     wcz
         if_be   mov     utx_tweak, #0
         if_a    mov     utx_tweak, #20
-                mov     htmp, ##@hlut_end - 4           ' Dealing with hub addresses, so convert byte
-                sub     htmp, ##@hlut_start             ' addresses to the N - 1 longs required by SETQ2
+                mov     htmp, ##(@hlut_end - 4) - @hlut_start           ' Dealing with hub addresses, so convert byte
+'                sub     htmp, ##@hlut_start             ' addresses to the N - 1 longs required by SETQ2
                 shr     htmp, #2
                 loc     pb, #@hlut_start
                 setq2   htmp
@@ -530,6 +571,13 @@ usb_host_start
                 mov     ijmp1, #isr1_frame              ' Set the USB 1ms frame handler ISR routine
                 jmp     #host_reset                     ' Initialize host and enter main processing loop
 ' */
+
+usb_rpin_ls_val	long	USB_V1HMODE_LS		' USB_V2MODE for v2 silicon
+usb_xpin_ls_val	long	_1_5Mbps		' USB_H_LS_NCO for v2 silicon
+
+usb_rpin_fs_val	long	USB_V1HMODE_FS		' USB_V2MODE for v2 silicon
+usb_xpin_fs_val	long	_12Mbps			' USB_H_FS_NCO for v2 silicon
+
 ' /* txn_setup
 '------------------------------------------------------------------------------
 ' SETUP transaction. The mechanics of SETUP are identical to OUT, but it's
@@ -1072,9 +1120,9 @@ set_speed_low
                 test    hstatus, #DWNSTRM_HUBF wz       ' If no downstream hub connected, set low-speed baudrate
         if_z    dirl    #DP
         if_z    dirl    #DM
-                wrpin   ##USB_V1HMODE_LS, #DP           ' Low-speed signalling is always used
-                wrpin   ##USB_V1HMODE_LS, #DM
-        if_z    wxpin   ##_1_5Mbps, #DM                 ' Set 1.5Mbs baudrate if no downstream hub
+                wrpin   usb_rpin_ls_val, #DP           ' Low-speed signalling is always used
+                wrpin   usb_rpin_ls_val, #DM
+        if_z    wxpin   usb_xpin_ls_val, #DM                 ' Set 1.5Mbs baudrate if no downstream hub
 {
                 wrpin   ##USB_V2MODE, #DP               ' Low-speed signalling is always used
                 wrpin   ##USB_V2MODE, #DM
@@ -1523,9 +1571,9 @@ host_reset
                 setint1 #0
                 dirl    #DP                             ' Put smart pins into reset
                 dirl    #DM
-                wrpin   ##USB_V1HMODE_FS, #DP           ' The host is also the root hub, so full-speed is its native speed
-                wrpin   ##USB_V1HMODE_FS, #DM
-                wxpin   ##_12Mbps, #DM                  ' Default to Full-Speed
+                wrpin   usb_rpin_fs_val, #DP           ' The host is also the root hub, so full-speed is its native speed
+                wrpin   usb_rpin_fs_val, #DM
+                wxpin   usb_xpin_fs_val, #DM                  ' Default to Full-Speed
 {
                 wrpin   ##USB_V2MODE, #DP               ' Low-speed signalling is always used
                 wrpin   ##USB_V2MODE, #DM
@@ -2293,6 +2341,7 @@ usb_cache_end
 sz_usb_kbm_ver  byte    "v0.05", 0
 ' Current error state of the USB, posted by the USB_ERROR event. The error code
 ' will be one of the constants in the "Protocol error codes" enumeration.
+       	      	alignl
 usb_error_code  long    ERR_NONE
 '------------------------------------------------------------------------------
 ' Keyboard FIFO buffer.

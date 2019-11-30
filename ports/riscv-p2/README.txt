@@ -4,7 +4,9 @@
 
 Most of the changes are internal, involving the use of a new compiler
 framework. There are also some fixes to the VGA and a few more
-built-in modules.
+built-in modules. The VGA and USB should work now with both the
+original P2 eval boards and the new ("v2") silicon.
+
 
 This version has been compiled with code compression, so it has more room
 available for user programs (approx. 200K). It also automatically runs
@@ -140,32 +142,53 @@ import os
 os.listdir()
 ```
 
-To mount an SD card after boot, do:
-```
-import pyb
-import os
-sd=pyb.SDCard()
-os.mount(sd, '/sd')
-os.chdir('/sd')
-```
-
 You can run a script from a file via something like:
 ```
 execfile("perftest.py")
 ```
 
-### Manual detection of SD Cards
+Sometimes an SD card is not automatically detected (different cards
+seem to have different characteristics and micropython doesn't detect
+them all). In this case you should follow the steps for inserting an
+SD card after boot.
 
-Sometimes the SD card isn't automatically detected. In that case you
-can force it on by doing:
+### Inserting an SD card after boot
+
+To mount an SD card after boot, do:
 ```
+import pyb
 sd=pyb.SDCard()
+sd.present()
+```
+
+`sd.present()` should return `True`. If it does not, then you'll have
+to power the card on manually:
+```
 sd.power(1)
 ```
-This should return `True` if a card is detected and initialized
-properly. You can also see if a card is found by checking
-`sd.present()`, which will be true or false. Once the card is detected
-you can manually mount it as described above.
+
+Now you can mount the drive. This is a two step process; first we use
+`os.mount()` to establish a name for the SD card, then we use
+`os.chdir()` to switch to it.
+
+```
+import os
+os.mount(sd, '/sd')
+os.chdir('/sd')
+```
+
+## CPUs
+
+It is possible to run code in other CPUs ("cogs") using the Cpu object:
+```
+# code is a byte array containing the program to execute
+code=b'\x5f\x70\x64\xfd\x96\x98\x80\xff\x1f\x00\x66\xfd\xf0\xff\x9f\xfd\x00\x00\x00\x00'
+
+import pyb
+cog=pyb.Cpu()   # create an object for the CPU
+cog.start(code)
+cog.stop()
+```
 
 ## Other Notes
 
@@ -190,9 +213,8 @@ initialization time.
 ### Memory map
 
 ```
-$00000 - $03FFF: RISC-V emulation code
-$04000 - $6FFFF: python space
-$70000 - $7BFFF: cache space
+$00000 - $0FFFF: RISC-V emulation code
+$10000 - $7BFFF: python space
 $7C000 - $7FFFF: debug space
 ```
 

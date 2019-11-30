@@ -33,6 +33,7 @@
 typedef struct _pyb_cpu_obj_t {
     mp_obj_base_t base;
     mp_int_t id;
+    mp_obj_t data;
 } pyb_cpu_obj_t;
 
 #define CPU_ID(obj) ((obj)->id)
@@ -47,6 +48,7 @@ STATIC mp_obj_t pyb_cpu_make_new(const mp_obj_type_t *type, size_t n_args, size_
     pyb_cpu_obj_t *self = m_new_obj(pyb_cpu_obj_t);
     self->base.type = type;
     self->id = -1;
+    self->data = NULL;
     return self;
 }
 
@@ -58,17 +60,28 @@ mp_obj_t pyb_cpu_id(mp_obj_t self_in) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_cpu_id_obj, pyb_cpu_id);
 
-mp_obj_t pyb_cpu_start(mp_obj_t self_in, mp_obj_t code) {
-    pyb_cpu_obj_t *self = self_in;
+mp_obj_t pyb_cpu_start(size_t n_args, const mp_obj_t *args) {
+    pyb_cpu_obj_t *self = args[0];
+    void *codeptr, *dataptr;
     mp_buffer_info_t bufinfo;
+    mp_buffer_info_t datinfo;
     mp_int_t cogid;
-    
-    mp_get_buffer_raise(code, &bufinfo, MP_BUFFER_READ);
-    cogid = _cognew(bufinfo.buf, 0);
+
+    mp_get_buffer_raise(args[1], &bufinfo, MP_BUFFER_READ);
+    codeptr = (void *)bufinfo.buf;
+    if (n_args == 2) {
+        dataptr = NULL;
+        self->data = NULL;
+    } else {
+        self->data = args[2];
+        mp_get_buffer_raise(args[2], &datinfo, MP_BUFFER_RW);
+        dataptr = (void *)datinfo.buf;
+    }
+    cogid = _cognew(codeptr, dataptr);
     self->id = cogid;
     return mp_obj_new_int(cogid);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_cpu_start_obj, pyb_cpu_start);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_cpu_start_obj, 2, 3, pyb_cpu_start);
 
 mp_obj_t pyb_cpu_stop(mp_obj_t self_in) {
     pyb_cpu_obj_t *self = self_in;

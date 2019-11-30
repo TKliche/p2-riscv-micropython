@@ -179,15 +179,43 @@ os.chdir('/sd')
 
 ## CPUs
 
-It is possible to run code in other CPUs ("cogs") using the Cpu object:
+It is possible to run code in other CPUs ("cogs") using the Cpu
+object. This has methods:
 ```
-# code is a byte array containing the program to execute
-code=b'\x5f\x70\x64\xfd\x96\x98\x80\xff\x1f\x00\x66\xfd\xf0\xff\x9f\xfd\x00\x00\x00\x00'
-
 import pyb
-cog=pyb.Cpu()   # create an object for the CPU
-cog.start(code)
-cog.stop()
+x=pyb.Cpu()
+
+# code is a byte array containing the program to execute
+# this can come from a file on disk, or by constructing a binary
+# object using a PNut or fastspin listing file
+
+# data is an optional mutable bytearray which the cpu object can
+# read from and can change
+
+x.start(code, data)
+x.stop()
+```
+
+For example:
+
+```
+import pyb
+
+#
+# Here is a program that flashes a pin
+# it looks at its data array for the pin number, then
+# updates that array constantly with the number of times it has
+# toggled
+#
+code=bytes([0x00, 0x0f, 0x04, 0xfb, 0x5f, 0x0e, 0x60, 0xfd, 0x01, 0x10, 0x04, 0xf1, 0x00, 0x11, 0x64, 0xfc,  0x96, 0x98, 0x80, 0xff, 0x1f, 0x00, 0x66, 0xfd, 0xe8, 0xff, 0x9f, 0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+data1=bytearray([56, 0, 0, 0])
+data2=bytearray([57, 0, 0, 0])
+
+cog1=pyb.Cpu()   # create an object for the CPU
+cog1.start(code, data1) # start on pin 56
+cog2=pyb.Cpu()
+cog2.start(code, data2) # start on pin 57
+cog1.stop() # stop pin 56
 ```
 
 ## Other Notes

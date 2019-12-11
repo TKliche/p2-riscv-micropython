@@ -36,27 +36,35 @@ typedef struct _pyb_cpu_obj_t {
     mp_obj_t data;
 } pyb_cpu_obj_t;
 
-#define CPU_ID(obj) ((obj)->id)
-
 void pyb_cpu_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
     pyb_cpu_obj_t *self = self_in;
-    mp_printf(print, "CPU(%d)", CPU_ID(self));
+    if (self->id == -1) {
+        mp_printf(print, "CPU(unallocated)");
+    } else {
+        mp_printf(print, "CPU(%d)", self->id);
+    }
 }
 
+//
+// legal methods:
+// Cpu(): will allocate a CPU dynamically
+// Cpu(N): will call _coginit(N, ...) (so fixed Cpu)
+//
 STATIC mp_obj_t pyb_cpu_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
-    mp_arg_check_num(n_args, n_kw, 0, 0, false);
+    mp_arg_check_num(n_args, n_kw, 0, 1, false);
     pyb_cpu_obj_t *self = m_new_obj(pyb_cpu_obj_t);
     self->base.type = type;
     self->id = -1;
-    self->data = NULL;
+    if (n_args >= 1) {
+        self->id = mp_obj_get_int(args[0]);
+    }
+    self->data = mp_const_none;
     return self;
 }
 
 mp_obj_t pyb_cpu_id(mp_obj_t self_in) {
     pyb_cpu_obj_t *self = self_in;
-    mp_int_t val;
-    val = CPU_ID(self);
-    return mp_obj_new_int(val);
+    return mp_obj_new_int(self->id);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_cpu_id_obj, pyb_cpu_id);
 
@@ -71,13 +79,14 @@ mp_obj_t pyb_cpu_start(size_t n_args, const mp_obj_t *args) {
     codeptr = (void *)bufinfo.buf;
     if (n_args == 2) {
         dataptr = NULL;
-        self->data = NULL;
+        self->data = mp_const_none;
     } else {
         self->data = args[2];
         mp_get_buffer_raise(args[2], &datinfo, MP_BUFFER_RW);
         dataptr = (void *)datinfo.buf;
     }
-    cogid = _cognew(codeptr, dataptr);
+    cogid = (self->id == -1) ? 0x10 : self->id;
+    cogid = _coginit(cogid, codeptr, dataptr);
     self->id = cogid;
     return mp_obj_new_int(cogid);
 }
@@ -85,9 +94,10 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_cpu_start_obj, 2, 3, pyb_cpu_star
 
 mp_obj_t pyb_cpu_stop(mp_obj_t self_in) {
     pyb_cpu_obj_t *self = self_in;
-    int val = CPU_ID(self);
-    _cogstop(val);
-    self->id = -1;
+    if (self->id != -1) {
+        _cogstop(self->id);
+        self->id = -1;
+    }
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_cpu_stop_obj, pyb_cpu_stop);

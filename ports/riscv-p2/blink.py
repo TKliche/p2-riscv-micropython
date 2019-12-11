@@ -3,9 +3,12 @@
 #
 import array
 import pyb
+import ubinascii
 
 # the PASM code to run, compiled into hex
-code=b'001104fb011304fb021504fb5f1060fd011404f1021564fc1f1260fdecff9ffd0000000000000000000000000000000000000000000000000000000000000000'
+# the hex string here is the output of
+#    xxd -c 256 -ps blink.binary
+code=ubinascii.unhexlify('001104fb011304fb021504fb5f1060fd011404f1021564fc1f1260fdecff9ffd0000000000000000000000000000000000000000000000000000000000000000')
 
 # data for the first pin (pin 57)
 # we'll toggle 4 times/second (system clock frequency is 160 MHz)

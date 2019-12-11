@@ -254,9 +254,11 @@ Now `code` is a bytearray containing the bytes we need.
 If for some reason using an SD card isn't practical, we can put the
 necessary bytes directly into a bytearray. The blink.lst file shows us
 the hex bytes, or we can use a tool like xxd to dump them from the
-binary. Then assign them to a variable using some notation like:
+binary. Then assign them to a variable. Micropython as a ubinascii
+module which allows conversion from hex to bytes, so we can do:
 ```
-code=b'001104fb011304fb021504fb5f1060fd011404f1021564fc1f1260fdecff9ffd0000000000000000000000000000000000000000000000000000000000000000'
+import ubinascii
+code=ubinascii.unhexlify('001104fb011304fb021504fb5f1060fd011404f1021564fc1f1260fdecff9ffd0000000000000000000000000000000000000000000000000000000000000000')
 ```
 
 We also need to prepare one or more data mailboxes for the COG

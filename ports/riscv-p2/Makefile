@@ -72,6 +72,7 @@ SRC_C = \
 	modpybpin.c \
 	moduos.c \
 	board.c \
+	help.c \
 	sdcard.c \
 	vgatext.c \
 	vga_tile_driver.c \

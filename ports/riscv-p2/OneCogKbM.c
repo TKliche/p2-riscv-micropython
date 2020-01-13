@@ -18,9 +18,6 @@
 #define Yield__()
 #endif
 
-static  void OneCogKbM_mydirl_(int32_t pin);
-static  void OneCogKbM_mydirh_(int32_t pin);
-static  void OneCogKbM_mywrpin_(int32_t mode, int32_t pin);
 static  int32_t OneCogKbM_check_hw_rev(void);
 
 static char dat[] = {
@@ -445,18 +442,11 @@ static void _dorelocs(uint8_t *dat, struct reloc__ *reloc)
         reloc++;
     }
 }
-static void _doreloc(void) __attribute__((constructor));
-static void _doreloc(void)
-{  static int done = 0;
-   if (!done) {
-     _dorelocs( (uint8_t*)&dat[0], &_reloc_dat[0]);
-     done = 1;
-   }
-}
 
 //
 int32_t OneCogKbM_start(OneCogKbM *self, int32_t status)
 {
+  _dorelocs( (uint8_t*)&dat[0], &_reloc_dat[0] );
   // if v2 silicon, adjust some constants accordingly
   if (self->hw_rev == 0) {
     self->hw_rev = OneCogKbM_check_hw_rev();
@@ -471,11 +461,11 @@ int32_t OneCogKbM_start(OneCogKbM *self, int32_t status)
   self->usbcog = _cognew((int32_t)(((int32_t *)&dat[36])), (int32_t)(&self->itemaddr)) + 1;
   if (self->usbcog) {
     // DIR bit low puts smart pin in reset mode
-    OneCogKbM_mydirl_(ONECOGKBM_USB_EVENT_REPO);
+    _dirl(ONECOGKBM_USB_EVENT_REPO);
     // Set "long repository" mode to act as an event mailbox
-    OneCogKbM_mywrpin_(ONECOGKBM_SP_REPO1_MODE, ONECOGKBM_USB_EVENT_REPO);
+    _wrpin(ONECOGKBM_USB_EVENT_REPO, ONECOGKBM_SP_REPO1_MODE);
     // Enable the event mailbox smart pin (will raise IN)
-    OneCogKbM_mydirh_(ONECOGKBM_USB_EVENT_REPO);
+    _dirh(ONECOGKBM_USB_EVENT_REPO);
     // Pack the USB port data into a single long
     ((char *)status)[0] = self->usbcog;
     // Long repository smart pin to poll for event notifications
@@ -484,26 +474,6 @@ int32_t OneCogKbM_start(OneCogKbM *self, int32_t status)
   //    byte[status][2] := 0                                ' Client must set <> 0 at kbd "ready" event, zero at disconnect event
   //    byte[status][3] := 0                                ' Client must set <> 0 at mouse "ready" event, zero at disconnect event
   return self->usbcog;
-}
-
-int32_t OneCogKbM_getdat(void)
-{
-  return ((int32_t)(((int32_t *)&dat[36])));
-}
-
-static void OneCogKbM_mydirl_(int32_t pin)
-{
- _dirl(pin); 
-}
-
-static void OneCogKbM_mydirh_(int32_t pin)
-{
- _dirh(pin); 
-}
-
-static void OneCogKbM_mywrpin_(int32_t mode, int32_t pin)
-{
- _wrpin(pin, mode); 
 }
 
 int32_t OneCogKbM_mouse(OneCogKbM *self)
@@ -528,23 +498,6 @@ int32_t OneCogKbM_key(void)
     ((int32_t *)&dat[4972])[0] &= ONECOGKBM_KBD_BUFFMASK;
   }
   return data;
-}
-
-int32_t OneCogKbM_geterrorcode(void)
-{
-  // Hub long with the error value
-  return ((int32_t)(((int32_t *)&dat[4968])));
-}
-
-int32_t OneCogKbM_getversion(void)
-{
-  // ASCIIZ version string pointer
-  return ((int32_t)(((char *)&dat[4961])));
-}
-
-Tuple2__ OneCogKbM_getdebuginfo(OneCogKbM *self)
-{
-  return MakeTuple2__(self->itemaddr, self->datavals[0]);
 }
 
 // #endregion (Spin VAR and functions)

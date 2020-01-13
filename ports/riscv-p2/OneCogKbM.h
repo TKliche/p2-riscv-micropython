@@ -859,17 +859,6 @@ if you have a new byte.
 // ------------------------------------------------------------------------------
 // HID Protocol codes:
 // ------------------------------------------------------------------------------
-#ifndef Tuple2__
-  struct tuple2__ { int32_t v0;  int32_t v1; };
-# define Tuple2__ struct tuple2__
-  static Tuple2__ MakeTuple2__(int32_t x0,int32_t x1) {
-    Tuple2__ t;
-    t.v0 = x0;
-    t.v1 = x1;
-    return t;
-  }
-#endif
-
 
 typedef struct OneCogKbM {
   volatile int32_t 	usbcog;
@@ -883,10 +872,6 @@ typedef struct OneCogKbM {
 } OneCogKbM;
 
   int32_t OneCogKbM_start(OneCogKbM *self, int32_t status);
-  int32_t OneCogKbM_getdat(void);
   int32_t OneCogKbM_mouse(OneCogKbM *self);
   int32_t OneCogKbM_key(void);
-  int32_t OneCogKbM_geterrorcode(void);
-  int32_t OneCogKbM_getversion(void);
-  Tuple2__ OneCogKbM_getdebuginfo(OneCogKbM *self);
 #endif

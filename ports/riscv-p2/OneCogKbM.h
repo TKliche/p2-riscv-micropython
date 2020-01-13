@@ -871,7 +871,7 @@ typedef struct OneCogKbM {
   volatile int32_t 	hw_rev;
 } OneCogKbM;
 
-  int32_t OneCogKbM_start(OneCogKbM *self, int32_t status);
-  int32_t OneCogKbM_mouse(OneCogKbM *self);
+  int32_t OneCogKbM_start(int32_t status);
+  int32_t OneCogKbM_mouse(void);
   int32_t OneCogKbM_key(void);
 #endif

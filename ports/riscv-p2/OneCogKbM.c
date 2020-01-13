@@ -443,9 +443,12 @@ static void _dorelocs(uint8_t *dat, struct reloc__ *reloc)
     }
 }
 
-//
-int32_t OneCogKbM_start(OneCogKbM *self, int32_t status)
+// local variables
+static struct OneCogKbM it;
+
+int32_t OneCogKbM_start(int32_t status)
 {
+  OneCogKbM *self = &it;
   _dorelocs( (uint8_t*)&dat[0], &_reloc_dat[0] );
   // if v2 silicon, adjust some constants accordingly
   if (self->hw_rev == 0) {
@@ -476,8 +479,9 @@ int32_t OneCogKbM_start(OneCogKbM *self, int32_t status)
   return self->usbcog;
 }
 
-int32_t OneCogKbM_mouse(OneCogKbM *self)
+int32_t OneCogKbM_mouse(void)
 {
+    OneCogKbM *self = &it;
   int32_t data = 0;
   data = self->datavals[0];
   return data;

@@ -16,7 +16,6 @@ extern int p2_getbyte();
 extern void p2_putbyte(int c);
 
 vgatext vga;
-OneCogKbM usb1;
 BufferSerial ser1;
 static volatile uint8_t usb1_status[4];
 static int32_t usb1_eventa;
@@ -29,7 +28,7 @@ void mp_hal_io_init(void) {
     
     p2_cycles_per_millis = _clockfreq() / 1000;
     vgatext_start(&vga, VGA_BASEPIN);
-    OneCogKbM_start(&usb1, (int32_t)&usb1_status);
+    OneCogKbM_start((int32_t)&usb1_status);
     cog = usb1_status[0] - 1;
     if (cog >= 0) {
         usb1_eventa = usb1_status[1];

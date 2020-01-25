@@ -21,23 +21,6 @@
 #endif
 //#define USER_MEMORY 128*1024
 
-#if MICROPY_ENABLE_COMPILER
-void do_str(const char *src, mp_parse_input_kind_t input_kind) {
-    nlr_buf_t nlr;
-    if (nlr_push(&nlr) == 0) {
-        mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), 0);
-        qstr source_name = lex->source_name;
-        mp_parse_tree_t parse_tree = mp_parse(lex, input_kind);
-        mp_obj_t module_fun = mp_compile(&parse_tree, source_name, MP_EMIT_OPT_NONE, true);
-        mp_call_function_0(module_fun);
-        nlr_pop();
-    } else {
-        // uncaught exception
-        mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
-    }
-}
-#endif
-
 static char *stack_top;
 #if MICROPY_ENABLE_GC
 static char heap[USER_MEMORY];
@@ -82,7 +65,7 @@ STATIC bool init_sdcard_fs(void) {
         if (vfs == NULL || vfs_fat == NULL) {
             break;
         }
-        vfs_fat->flags = FSUSER_FREE_OBJ;
+        vfs_fat->blockdev.flags = MP_BLOCKDEV_FLAG_FREE_OBJ;
         sdcard_init_vfs(vfs_fat, part_num);
 
         // try to mount the partition

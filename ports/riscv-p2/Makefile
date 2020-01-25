@@ -74,9 +74,6 @@ SRC_C = \
 	board.c \
 	help.c \
 	sdcard.c \
-	vgatext.c \
-	vga_tile_driver.c \
-	OneCogKbM.c \
 	BufferSerial.c \
 	lib/utils/pyexec.c \
 	lib/utils/stdout_helpers.c \
@@ -86,6 +83,10 @@ SRC_C = \
 	lib/oofatfs/ff.c \
 	lib/oofatfs/ffunicode.c \
 	lib/timeutils/timeutils.c \
+
+#	vgatext.c \
+#	vga_tile_driver.c \
+#	OneCogKbM.c \
 
 OBJ = $(CRT0) $(PY_CORE_O) $(PY_EXTMOD_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
 

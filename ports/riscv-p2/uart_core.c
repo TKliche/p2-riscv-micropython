@@ -15,19 +15,27 @@
 extern int p2_getbyte();
 extern void p2_putbyte(int c);
 
+#if MICROPY_P2_USE_VGA
 vgatext vga;
+#endif
 BufferSerial ser1;
+#if MICROPY_P2_USE_USB
 static volatile uint8_t usb1_status[4];
 static int32_t usb1_eventa;
+#endif
 
 unsigned int p2_cycles_per_millis;
 
 void mp_hal_io_init(void) {
-    int cog;
+#if MICROPY_P2_USE_USB    
     usb1_status[0] = usb1_status[1] = usb1_status[2] = usb1_status[3] = 0;
-    
+#endif    
     p2_cycles_per_millis = _clockfreq() / 1000;
+#if MICROPY_P2_USE_VGA    
     vgatext_start(&vga, VGA_BASEPIN);
+#endif
+#if MICROPY_P2_USE_USB
+    int cog;
     OneCogKbM_start((int32_t)&usb1_status);
     cog = usb1_status[0] - 1;
     if (cog >= 0) {
@@ -36,6 +44,7 @@ void mp_hal_io_init(void) {
     } else {
         printf("USB not started\n");
     }
+#endif    
     BufferSerial_start(&ser1);
 }
 
@@ -61,12 +70,12 @@ static int getrawbyte();
 // Receive single character
 int mp_hal_stdin_rx_chr(void) {
     unsigned char c;
-    int32_t flip = 0;
     
 #if MICROPY_MIN_USE_STDOUT
     int r = read(0, &c, 1);
     (void)r;
-#else
+#elif MICROPY_P2_USE_VGA
+    int32_t flip = 0;
     int ci;
     do {
         ci = getrawbyte();
@@ -79,10 +88,13 @@ int mp_hal_stdin_rx_chr(void) {
         vgatext_hidecursor(&vga);
     }
     c = ci;
+#else
+    c = getrawbyte();
 #endif
     return c;
 }
 
+#if MICROPY_P2_USE_USB
 #define ESC "\x1b"
 
 /* table organized by scan codes */
@@ -157,6 +169,20 @@ static int getrawbyte() {
     }
     return ci;
 }
+#else
+static int getrawbyte() {
+    int event;
+    int c;
+    event = ser1.data;
+    if (event) {
+        ser1.data = 0;
+        c = event & 0xff;
+    } else {
+        c = -1;
+    }
+    return c;
+}
+#endif
 
 void _pausems(unsigned numms)
 {
@@ -182,7 +208,9 @@ void mp_hal_stdout_tx_strn(const char *str, mp_uint_t len) {
         }
 #endif        
         p2_putbyte(c);
+#if MICROPY_P2_USE_VGA        
         vgatext_tx(&vga, c);
+#endif        
     }
 //    _pausems(500);
 #endif

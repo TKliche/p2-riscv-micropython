@@ -121,7 +121,8 @@ register.
 For writes, the value to be written is passed in the `pb` register.
 
 In all cases registers `pb` and `ptrb` may be modified by the
-subroutine. All other COG registers should be left alone.
+subroutine, as may the COG registers between `$1e0` and `$1ef`. All
+other COG registers should be left alone.
 
 ## Timing
 

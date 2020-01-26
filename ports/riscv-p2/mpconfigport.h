@@ -44,6 +44,7 @@
 #define MICROPY_DEBUG_PRINTERS      (0)
 #define MICROPY_ENABLE_GC           (1)
 #define MICROPY_READER_POSIX        (0)
+#define MICROPY_USE_READLINE        (1)
 #define MICROPY_USE_READLINE_HISTORY (1)
 #define MICROPY_GC_ALLOC_THRESHOLD  (0)
 
@@ -83,6 +84,7 @@
 #define MICROPY_PY_BUILTINS_STR_CENTER (1)
 #define MICROPY_PY_BUILTINS_STR_PARTITION (1)
 #define MICROPY_PY_BUILTINS_STR_SPLITLINES (1)
+#define MICROPY_PY_DESCRIPTORS      (1)
 #define MICROPY_PY_GC               (1)
 #define MICROPY_PY_COLLECTIONS      (1)
 #define MICROPY_PY_MATH             (1)

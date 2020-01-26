@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "py/mpconfig.h"
+#include "py/stream.h"
 #include "vgatext.h"
 #include "OneCogKbM.h"
 #include "BufferSerial.h"
@@ -220,6 +221,17 @@ void
 p2_putbyte(int c)
 {
     _csr_write(_UART_CSR, c);
+}
+
+MP_WEAK uintptr_t mp_hal_stdio_poll(uintptr_t poll_flags) {
+    uintptr_t ret = 0;
+
+#ifdef NEVER    
+    if ((poll_flags & MP_STREAM_POLL_RD) && ser1.data) {
+        ret |= MP_STREAM_POLL_RD;
+    }
+#endif    
+    return ret;
 }
 
 uint64_t

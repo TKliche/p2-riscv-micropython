@@ -74,7 +74,6 @@ SRC_C = \
 	board.c \
 	help.c \
 	sdcard.c \
-	BufferSerial.c \
 	lib/utils/pyexec.c \
 	lib/utils/stdout_helpers.c \
 	lib/utils/sys_stdio_mphal.c \
@@ -84,6 +83,7 @@ SRC_C = \
 	lib/oofatfs/ffunicode.c \
 	lib/timeutils/timeutils.c \
 
+#	BufferSerial.c \
 #	vgatext.c \
 #	vga_tile_driver.c \
 #	OneCogKbM.c \

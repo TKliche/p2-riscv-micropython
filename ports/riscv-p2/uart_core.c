@@ -18,7 +18,6 @@ extern void p2_putbyte(int c);
 #if MICROPY_P2_USE_VGA
 vgatext vga;
 #endif
-BufferSerial ser1;
 #if MICROPY_P2_USE_USB
 static volatile uint8_t usb1_status[4];
 static int32_t usb1_eventa;
@@ -45,7 +44,6 @@ void mp_hal_io_init(void) {
         printf("USB not started\n");
     }
 #endif    
-    BufferSerial_start(&ser1);
 }
 
 #if 0
@@ -87,9 +85,13 @@ int mp_hal_stdin_rx_chr(void) {
     if (flip) {
         vgatext_hidecursor(&vga);
     }
-    c = ci;
+    c = (unsigned char)ci;
 #else
-    c = getrawbyte();
+    int ci;
+    do {
+        ci = getrawbyte();
+    } while (ci < 0);
+    c = (unsigned char)ci;
 #endif
     return c;
 }
@@ -145,9 +147,8 @@ static int getrawbyte() {
             kbd_stuff = 0;
         }
     }
-    event = ser1.data;
-    if (event != 0) {
-        ser1.data = 0;
+    event = _csr_read(_UART_CSR);
+    if (event >= 0) {
         ci = event & 0xff;
     } else {
         event = OneCogKbM_key();
@@ -173,9 +174,8 @@ static int getrawbyte() {
 static int getrawbyte() {
     int event;
     int c;
-    event = ser1.data;
-    if (event) {
-        ser1.data = 0;
+    event = _csr_read(_UART_CSR);
+    if (event >= 0) {
         c = event & 0xff;
     } else {
         c = -1;

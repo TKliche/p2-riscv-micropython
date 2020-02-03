@@ -214,6 +214,7 @@ int readline_process_char(int c) {
             redraw_step_forward = 1;
         }
     } else if (rl.escape_seq == ESEQ_ESC) {
+        DEBUG_printf("ESEQ_ESC(%x)", c);
         switch (c) {
             case '[':
                 rl.escape_seq = ESEQ_ESC_BRACKET;
@@ -224,8 +225,10 @@ int readline_process_char(int c) {
             default:
                 DEBUG_printf("(ESC %d)", c);
                 rl.escape_seq = ESEQ_NONE;
+                break;
         }
     } else if (rl.escape_seq == ESEQ_ESC_BRACKET) {
+        DEBUG_printf("ESEQ_ESC_BRACKET(%c)", c);
         if ('0' <= c && c <= '9') {
             rl.escape_seq = ESEQ_ESC_BRACKET_DIGIT;
             rl.escape_seq_buf[0] = c;

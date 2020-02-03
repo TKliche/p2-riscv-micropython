@@ -10,6 +10,7 @@
 #include "py/mperrno.h"
 #include "lib/utils/pyexec.h"
 #include "lib/oofatfs/ff.h"
+#include "lib/mp-readline/readline.h"
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
 #include "sdcard.h"
@@ -170,6 +171,8 @@ int main(int argc, char **argv) {
     mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_path), 0);
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_)); // current dir (or base dir of the script)
 
+    readline_init0();
+    
     bool mounted_sdcard = false;
     #if MICROPY_HW_SDCARD_MOUNT_AT_BOOT
     // if an SD card is present then mount it on /sd/

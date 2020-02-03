@@ -15,9 +15,9 @@
 #include "sdcard.h"
 
 #if !MICROPY_USE_VGA
-#define USER_MEMORY 256*1024
+#define USER_MEMORY 260*1024
 #else
-#define USER_MEMORY 230*1024
+#define USER_MEMORY 232*1024
 #endif
 //#define USER_MEMORY 128*1024
 

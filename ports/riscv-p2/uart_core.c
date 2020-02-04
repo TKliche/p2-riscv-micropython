@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "py/mpconfig.h"
+#include "py/stream.h"
 #include "vgatext.h"
 #include "OneCogKbM.h"
 #include "BufferSerial.h"
@@ -91,7 +92,7 @@ int mp_hal_stdin_rx_chr(void) {
     do {
         ci = getrawbyte();
     } while (ci < 0);
-    c = (unsigned char)ci;
+    c = (unsigned char) ci;
 #endif
     return c;
 }
@@ -172,13 +173,10 @@ static int getrawbyte() {
 }
 #else
 static int getrawbyte() {
-    int event;
     int c;
-    event = _csr_read(_UART_CSR);
-    if (event >= 0) {
-        c = event & 0xff;
-    } else {
-        c = -1;
+    c = _csr_read(_UART_CSR);
+    if (c >= 0) {
+        c = c & 0xff;
     }
     return c;
 }
@@ -220,6 +218,17 @@ void
 p2_putbyte(int c)
 {
     _csr_write(_UART_CSR, c);
+}
+
+MP_WEAK uintptr_t mp_hal_stdio_poll(uintptr_t poll_flags) {
+    uintptr_t ret = 0;
+
+    if ((poll_flags & MP_STREAM_POLL_RD)) {
+        if (_csr_read(_UART_STATUS_CSR) != 0) {
+            ret |= MP_STREAM_POLL_RD;
+        }
+    }
+    return ret;
 }
 
 uint64_t
